@@ -37,8 +37,8 @@
 
 			<div class="top-header">
 
-				<div class="logo">
-					<a href="/">
+				<a href="/">
+					<div class="logo">
 						<svg version="1.1" id="logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 							width="26px" height="26px" viewBox="0 0 32 32" enable-background="new 0 0 32 32" xml:space="preserve">
 							<path fill-rule="evenodd" clip-rule="evenodd" fill="#fff" d="M19.4,10.5C19.4,10.5,19.4,10.5,19.4,10.5c0-0.1,0-0.1,0-0.2
@@ -52,9 +52,10 @@
 								C8.6,1.6,7.9,5,14.1,5.4z"/>
 						</svg>
 						<h1 class="nav-collapse-hide">Advanced<span>Tomato</span></h1>
-					</a>
-					<h2 class="currentpage nav-collapse-hide"></h2>
-				</div>
+
+						<h2 class="currentpage nav-collapse-hide"></h2>
+					</div>
+				</a>
 
 				<div class="left-container">
 					<a data-toggle="tooltip" title="Toggle Collapsed Navigation" href="#" class="toggle-nav"><i class="icon-align-left"></i></a>
