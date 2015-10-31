@@ -156,6 +156,7 @@ function AdvancedTomato () {
 
 	}
 
+	// Check for Navigation State NVRAM value
 	if (typeof nvram.at_navi !== 'undefined') {
 
 		if (nvram.at_navi == 'collapsed') {
@@ -187,9 +188,9 @@ function systemUI () {
 			stats.wanstatus = '<a title="Go to Status Overview" href="#" onclick="loadPage(\'#status-home.asp\');">' + ((stats.wanstatus == 'Connected') ? '<span style="color: green;">' + stats.wanstatus + '</span>' : stats.wanstatus) + '</a>';
 			$('.system-ui .datasystem').html('<div class="router-name">' + stats.routermodel + ' <small class="pull-right">(' + stats.uptime + ')</small></div>' +
 				'<div class="inner-container row">' +
-				'<div class="col-sm-2">CPU:</div><div class="col-sm-10">' + stats.cpuload + ' (' + stats.cpupercent + ') <div class="progress"><div class="bar" style="width: ' + stats.cpupercent + '"></div></div></div>'+
-				'<div class="col-sm-2">RAM:</div><div class="col-sm-10">' + stats.memory + ' <div class="progress"><div class="bar" style="width: ' + stats.memoryperc + '"></div></div></div>' +
-				((nvram.swap != null) ? '<div class="col-sm-2">SWAP:</div><div class="col-sm-10">' + stats.swap + ' <div class="progress"><div class="bar" style="width: ' + stats.swapperc + '"></div></div></div>':'') +
+				'<div class="col-sm-2">CPU:</div><div class="col-sm-10">' + stats.cpuload + '</div>'+
+				'<div class="col-sm-2">RAM:</div><div class="col-sm-10">' + stats.memory + '<div class="progress"><div class="bar" style="width: ' + stats.memoryperc + '"></div></div></div>' +
+				((nvram.swap != null) ? '<div class="col-sm-2">SWAP:</div><div class="col-sm-10">' + stats.swap + '<div class="progress"><div class="bar" style="width: ' + stats.swapperc + '"></div></div></div>':'') +
 				'<div class="col-sm-2">WAN:</div><div class="col-sm-10">' + stats.wanstatus + ' (' + stats.wanuptime + ')</div></div>').removeClass('align center');
 		}
 
@@ -198,7 +199,7 @@ function systemUI () {
 }
 
 // Ajax Function to load pages
-function loadPage( page ) {
+function loadPage(page) {
 
 	// Since we use ajax, functions and timers stay in memory. Here we undefine & stop them to prevent issues with other pages.
 	if (typeof(ref) != 'undefined') {
@@ -217,6 +218,7 @@ function loadPage( page ) {
 
 	// Remove animation class from container, for reseting it
 	$('.container .ajaxwrap').removeClass('ajax-animation');
+
 
 	// Switch to JQUERY AJAX function call (doesn't capture all errors making it easier to debug)
 	$.ajax({
@@ -310,7 +312,6 @@ function loadPage( page ) {
 			// Stop & Remove Preloader
 			$('#nprogress').find('.bar').css({ 'animation': 'none' }).width('100%');
 			setTimeout(function() { $('#nprogress .bar').remove(); }, 150);
-
 		}
 
 	}).fail( function( jqXHR, textStatus, errorThrown ) {
