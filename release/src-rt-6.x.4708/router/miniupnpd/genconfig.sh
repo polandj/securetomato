@@ -73,7 +73,8 @@ fi
 # Tomato USB special case
 if [ -f ../shared/tomato_version ]; then
 	OS_NAME=Tomato
-	OS_VERSION="Tomato $(cat ../shared/tomato_version)"
+	TOMATO_VER=`cat ../shared/tomato_version | cut -d' ' -f2,3`
+	OS_VERSION="Tomato $TOMATO_VER"
 fi
 
 ${RM} ${CONFIGFILE}
@@ -520,6 +521,14 @@ cat >> ${CONFIGFILE} <<EOF
 /* Uncomment the following line if your device does not have a proper clock
  * BOOTID.UPNP.ORG can be set with command line */
 #define USE_TIME_AS_BOOTID
+
+EOF
+
+cat >> ${CONFIGFILE} <<EOF
+/* maximum lenght of SSDP packets we are generating
+ * (reception is done in a 1500byte buffer) */
+#define SSDP_PACKET_MAX_LEN 1024
+
 EOF
 
 echo "#endif /* ${CONFIGMACRO} */" >> ${CONFIGFILE}
