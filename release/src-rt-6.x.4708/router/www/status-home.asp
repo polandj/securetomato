@@ -371,7 +371,7 @@
 						/* IPV6-END */
 						{ title: 'DNS', rid: 'dns', text: stats.dns, ignore: nvram.wan_proto != 'disabled' },
 						{ title: 'DHCP', text: s }
-					]);
+					], '#sesdiv_lan', 'data-table dataonly' );
 
 				</script>
 			</div>
