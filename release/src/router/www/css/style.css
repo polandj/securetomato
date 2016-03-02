@@ -153,7 +153,7 @@ small { font-size: 80%; }
 	text-shadow: 0 1px 0 rgba(0,0,0, 0.15);
 }
 
-.top-header .logo svg { display: none; margin: -8px 0 0 -10px; padding:0; vertical-align: middle; }
+.top-header .logo img { display: none; margin: -8px 0 0 -10px; padding:0; vertical-align: middle; }
 
 .top-header .left-container {
 	float: left;
@@ -412,7 +412,7 @@ small { font-size: 80%; }
 	width:60px;
 }
 
-.top-header .logo.collapsed svg {
+.top-header .logo.collapsed img {
 	margin:15px 0 0;
 	display: inline-block;
 }
