@@ -1,3 +1,0 @@
-MODALIAS is set {
-	exec /sbin/hotplug2-modwrap -q %MODALIAS% ;
-}
