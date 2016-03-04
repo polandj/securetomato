@@ -14,6 +14,7 @@ Any Linux environment should work.  Ubuntu is known to work well.  Install the f
 - flex
 - pkg-config
 - autoconf
+- libtool
  
 Get the source code:
 ```
@@ -38,3 +39,7 @@ make help to see all the hardware.  Results will be in image/
 ## Submitting changes
 
 FOllow [this workflow](https://gun.io/blog/how-to-github-fork-branch-and-pull-request/)
+
+## Upstream Remotes
+https://github.com/Jackysi/advancedtomato2.git - The advanced tomato MIPS repo (everything except release/src-6.x..)
+git@bitbucket.org:jackysi/advancedtomato-arm.git - The advanced tomato ARM repo (release/src-6.x...)
