@@ -12,6 +12,8 @@ Any Linux environment should work.  Ubuntu is known to work well.  Install the f
 - libncurses5-dev
 - bison
 - flex
+- pkg-config
+- autoconf
  
 Get the source code:
 ```
@@ -27,7 +29,7 @@ export PATH=$PATH:/opt/brcm/hndtools-mipsel-linux/bin:/opt/brcm/hndtools-mipsel-
 ## Build
 
 ```
-cd $HOME/tomato/release/src-rt
+cd $HOME/securetomato/release/src-rt
 make <target(s)> V1=v52 V2=_tailored_name
 ```
 
