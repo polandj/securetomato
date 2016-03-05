@@ -15,6 +15,7 @@ Any Linux environment should work.  Ubuntu is known to work well.  Install the f
 - pkg-config
 - autoconf
 - libtool
+- texinfo
  
 Get the source code:
 ```
