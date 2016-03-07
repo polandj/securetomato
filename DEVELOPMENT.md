@@ -16,6 +16,7 @@ Any Linux environment should work.  Ubuntu is known to work well.  Install the f
 - autoconf
 - libtool
 - texinfo
+- gawk
  
 Get the source code:
 ```
@@ -44,3 +45,4 @@ FOllow [this workflow](https://gun.io/blog/how-to-github-fork-branch-and-pull-re
 ## Upstream Remotes
 https://github.com/Jackysi/advancedtomato2.git - The advanced tomato MIPS repo (everything except release/src-6.x..)
 git@bitbucket.org:jackysi/advancedtomato-arm.git - The advanced tomato ARM repo (release/src-6.x...)
+https://github.com/kvic-z/pixelserv-tls.git - PixelservTLS (router/pixelserv-tls)
