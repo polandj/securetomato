@@ -16,3 +16,4 @@ distclean:
 
 gitclean:
 	git clean -xfd
+	git checkout -- .
