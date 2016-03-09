@@ -3,52 +3,43 @@
 <script type="text/javascript">
 //	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
     /* Default Sources */
+    var dflt_sources = [
+        ['fb1d1107', 'http://adaway.org/hosts.txt'],
+        ['da9bd190', 'http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext'],
+        ['c2934517', 'http://winhelp2002.mvps.org/hosts.txt'],
+        ['f4af2545', 'http://someonewhocares.org/hosts/hosts'],
+        ['3b41114e', 'http://www.malwaredomainlist.com/hostslist/hosts.txt'],
+        ['353675ed', 'http://adblock.gjtech.net/?format=unix-hosts'],
+        ['88096bb7', 'http://hosts-file.net/ad_servers.txt']
+    ];
     var dflt = new TomatoGrid();
     dflt.setup = function() {
         var dsbld = nvram['malad_dflt'];
-        var sources = [
-            [1, 'Adaway', 'http://adaway.org/hosts.txt', 1],
-            [1, 'YoYo', 'http://pgl.yoyo.org/adservers/serverlist.php?hostformat=dnsmasq&showintro=0&mimetype=plaintext', 3],
-            [1, 'WinHelp', 'http://winhelp2002.mvps.org/hosts.txt', 1],
-            [1, 'SomeOne', 'http://someonewhocares.org/hosts/hosts', 1],
-            [1, 'MalDml', 'http://www.malwaredomainlist.com/hostslist/hosts.txt', 1],
-            [1, 'GJTech', 'http://adblock.gjtech.net/?format=unix-hosts', 1],
-            [1, 'HostFile', 'http://hosts-file.net/ad_servers.txt', 1],
-            [1, 'MalDom', 'http://mirror1.malwaredomains.com/files/justdomains', 2]
-        ];
-        this.init('dflt-grid', 'sort', 10, [
+       this.init('dflt-grid', 'sort', 10, [
             {type: 'checkbox'},
-            {type: 'text', attrib: 'disabled'},
-            {type: 'text', attrib: 'disabled'},
-            {type: 'select', attrib: 'disabled', options: [[1, 'Host'],[2, 'Domain'],[3, 'DNSMASQ']], class : 'input-small'}
+            {type: 'text', attrib: 'disabled'}
         ]);
         this.canDelete = false;
-        this.headerSet(['On', 'Name', 'URL', 'Format']);
-        for (i = 0; i < sources.length; ++i) {
-            var item = sources[i];
-            is_checked = dsbld.indexOf(item[1]) == -1 ? 1 : 0;
-            this.insertData(-1, [is_checked, item[1], item[2], item[3]]);
+        this.headerSet(['On', 'URL']);
+        for (i = 0; i < dflt_sources.length; ++i) {
+            var item = dflt_sources[i];
+            is_checked = dsbld.indexOf(item[0]) == -1 ? 1 : 0;
+            this.insertData(-1, [is_checked, item[1]]);
         }
         this.sort(1);
     }
     dflt.dataToView = function(data) {
         return [(data[0] != 0) ? '<i class="icon-check icon-green"></i>' : '<i class="icon-cancel icon-red"></i>', 
-            data[1],
-            data[2],
-            ['Host', 'Domain', 'DNSMASQ'][data[3] - 1]];
+            data[1]];
     }
     dflt.dataToFieldValues = function (data) {
         return [(data[0] != 0) ? 'checked' : '',
-            data[1],
-            data[2],
-            data[3]];
+            data[1]];
     }
     dflt.fieldValuesToData = function(row) {
         var f = fields.getAll(row);
         return [f[0].checked ? 1 : 0,
-            f[1].value,
-            f[2].value,
-            f[3].value];
+            f[1].value];
     }
     
     /* Optional Additional Sources */
@@ -57,7 +48,7 @@
         var f;
         f = fields.getAll(row);
 
-        return v_domain(f[1], quiet, false) && v_url(f[2], quiet);
+        return v_url(f[1], quiet);
     }
     xtra.resetNewEditor = function() {
         var f, c, n;
@@ -67,44 +58,35 @@
 
         f[0].checked = 1;
         f[1].value = '';
-        f[2].value = '';
-        f[3].selectedIndex = 0;
     }
     xtra.dataToView = function(data) {
         return [(data[0] != 0) ? '<i class="icon-check icon-green"></i>' : '<i class="icon-cancel icon-red"></i>', 
-            data[1],
-            data[2],
-            ['Host', 'Domain', 'DNSMASQ'][data[3] - 1]];
+            data[1]];
     }
     xtra.dataToFieldValues = function (data) {
         return [(data[0] != 0) ? 'checked' : '',
-            data[1],
-            data[2],
-            data[3]];
+            data[1]];
     }
     xtra.fieldValuesToData = function(row) {
         var f = fields.getAll(row);
         return [f[0].checked ? 1 : 0,
-            f[1].value,
-            f[2].value,
-            f[3].value];
+            f[1].value];
     }
     xtra.setup = function() {
         var i, j, m, s, t, n;
-        var sources = [];
 
         this.init('xtra-grid', 'sort', 5, [
             { type: 'checkbox'},
-            { type: 'text', maxlen: 10},
-            { type: 'text', maxlen: 100},
-            { type: 'select', options: [[1, 'Host'],[2, 'Domain'],[3, 'DNSMASQ']], class : 'input-small' }
+            { type: 'text', maxlen: 100}
         ]);
-        this.headerSet(['On', 'Name', 'URL', 'Format']);
+        this.headerSet(['On', 'URL']);
 
         var s = nvram.malad_xtra.split('>');
         for (var i = 0; i < s.length; ++i) {
             var t = s[i].split('<');
-            this.insertData(-1, t)
+            if (t.length == 2) {
+                this.insertData(-1, t);
+            }
         }
         this.sort(1);
         this.showNewEditor();
@@ -131,7 +113,9 @@
         this.headerSet(['Domain']);
         var s = nvram.malad_wtl.split(' ');
         for (var i = 0; i < s.length; ++i) {
-            this.insertData(-1, [s[i]]);
+            if (s[i].length > 0) {
+                this.insertData(-1, [s[i]]);
+            }
         }
         this.sort(0);
         this.showNewEditor();
@@ -158,7 +142,9 @@
         this.headerSet(['Domain']);
         var s = nvram.malad_bkl.split(' ');
         for (var i = 0; i < s.length; ++i) {
-            this.insertData(-1, [s[i]]);
+            if (s[i].length > 0) {
+                this.insertData(-1, [s[i]]);
+            }
         }
         this.sort(0);
         this.showNewEditor();
@@ -172,12 +158,20 @@
 
         fom = E('_fom');
 
+        fom.malad_enable.value = E('_f_malad_enable').checked ? 1 : 0;
+
         var dflts = dflt.getAllData();
         r = [];
         for (i = 0; i < dflts.length; ++i) {
             var item = dflts[i];
             if (item[0] == 0) {
-                r.push(item[1]);
+                // Lookup the abbreviated md5 and save that instead of full URL
+                for (j=0; j < dflt_sources.length; ++j) {
+                    if (dflt_sources[j][1] == item[1]) {
+                        r.push(dflt_sources[j][0]);
+                        break;
+                    }
+                }
             }
         }
         fom.malad_dflt.value = r.join(' ');
@@ -205,8 +199,15 @@
 
         form.submit('_fom', 1);
     }
-    
+   
     function earlyInit(){
+        f = E('_fom').elements;
+        b = !E('_f_malad_enable').checked;
+        for (i = 0; i < f.length; ++i) {
+            if (typeof(f[i]) == 'undefined' || (typeof(f[i].name) == 'undefined')) { continue; } /* IE Bugfix */
+            if ((f[i].name.substr(0, 1) != '_') && (f[i].type != 'button' && f[i].type != 'fieldset') && (f[i].name.indexOf('enable') == -1) &&
+                (f[i].name.indexOf('ne_v') == -1)) f[i].disabled = b;
+        }
         dflt.setup();
         xtra.setup();
         wtl.setup();
@@ -223,14 +224,23 @@
 
 <form id="_fom" method="post" action="tomato.cgi">
 <input type="hidden" name="_nextpage" value="/#advanced-maladware.asp">
-<input type="hidden" name="_nvset" value="1">
-<input type="hidden" name="_commit" value="1">
+<input type="hidden" name="malad_enable">
 <input type="hidden" name="malad_dflt">
 <input type="hidden" name="malad_xtra">
 <input type="hidden" name="malad_wtl">
 <input type="hidden" name="malad_bkl">
 
-<div class="box" data-box="routing-static"> 
+<div class="box" data-box="qos-basic-set">
+    <div class="heading">Basic Malware/Adware Settings</div>
+    <div class="content advanced-maladware"></div>
+    <script type="text/javascript">
+        $('.advanced-maladware').forms([
+        { title: 'Enable', name: 'f_malad_enable', type: 'checkbox', value: nvram.malad_enable == '1' }
+    ]);
+    </script>
+</div>
+
+<div class="box" data-box=""> 
 <div class="heading">Default Sources</div>
 <div class="section content">
 <table class="line-table" id="dflt-grid"></table>
@@ -239,16 +249,16 @@
 </div>
 </div>                  
 
-<div class="box">
-<div class="heading">Additional Sources</div>
-<div class="content">
+<div class="box" data-box="">
+<div class="heading">Extra Sources</div>
+<div class="section content">
 <table class="line-table" id="xtra-grid"></table><br />  
 <hr/>
 <p>Help</p>
 </div>
 </div>
 
-<div class="box" data-box="routing-static">
+<div class="box" data-box="">
 <div class="heading">Whitelist</div>
 <div class="section content">
 <table class="line-table" id="wtl-grid"></table>
@@ -258,7 +268,7 @@
 </div>
 </div>
 
-<div class="box" data-box="routing-static">
+<div class="box" data-box="">
 <div class="heading">Blacklist</div>
 <div class="section content">
 <table class="line-table" id="bkl-grid"></table>
