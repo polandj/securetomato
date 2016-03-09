@@ -2,6 +2,18 @@
 <content>
 <script type="text/javascript">
 //	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
+    var tabs = [['config', 'Config'],['sources', 'Sources'],['lists', 'Lists'],['status', 'Status']];
+    function tabSelect(name) {
+        tgHideIcons();
+        cookie.set('advanced_maladware_tab', name);
+        tabHigh(name);
+
+        for (var i = 0; i < tabs.length; ++i) {
+            var on = (name == tabs[i][0]);
+            elem.display(tabs[i][0] + '-tab', on);
+        }
+    }
+
     /* Default Sources */
     var dflt_sources = [
         ['fb1d1107', 'http://adaway.org/hosts.txt'],
@@ -15,7 +27,7 @@
     var dflt = new TomatoGrid();
     dflt.setup = function() {
         var dsbld = nvram['malad_dflt'];
-       this.init('dflt-grid', 'sort', 10, [
+        this.init('dflt-grid', 'sort', 10, [
             {type: 'checkbox'},
             {type: 'text', attrib: 'disabled'}
         ]);
@@ -201,13 +213,7 @@
     }
    
     function earlyInit(){
-        f = E('_fom').elements;
-        b = !E('_f_malad_enable').checked;
-        for (i = 0; i < f.length; ++i) {
-            if (typeof(f[i]) == 'undefined' || (typeof(f[i].name) == 'undefined')) { continue; } /* IE Bugfix */
-            if ((f[i].name.substr(0, 1) != '_') && (f[i].type != 'button' && f[i].type != 'fieldset') && (f[i].name.indexOf('enable') == -1) &&
-                (f[i].name.indexOf('ne_v') == -1)) f[i].disabled = b;
-        }
+        tabSelect(cookie.get('advanced_maladware_tab') || 'config');
         dflt.setup();
         xtra.setup();
         wtl.setup();
@@ -224,58 +230,81 @@
 
 <form id="_fom" method="post" action="tomato.cgi">
 <input type="hidden" name="_nextpage" value="/#advanced-maladware.asp">
-<input type="hidden" name="malad_enable">
-<input type="hidden" name="malad_dflt">
-<input type="hidden" name="malad_xtra">
-<input type="hidden" name="malad_wtl">
-<input type="hidden" name="malad_bkl">
 
-<div class="box" data-box="qos-basic-set">
-    <div class="heading">Basic Malware/Adware Settings</div>
-    <div class="content advanced-maladware"></div>
+<div id="advanced-maladware">
     <script type="text/javascript">
-        $('.advanced-maladware').forms([
-        { title: 'Enable', name: 'f_malad_enable', type: 'checkbox', value: nvram.malad_enable == '1' }
-    ]);
+        var html = '<ul id="tabs" class="nav nav-tabs">';
+        for (j = 0; j < tabs.length; j++) {
+            html += '<li><a href="javascript:tabSelect(\''+tabs[j][0]+'\')" id="'+tabs[j][0]+'">'+tabs[j][1]+'</a></li>';
+        }
+        html += '</ul>';
+        html += '<div class="content">';
+
+        // Config Tab
+        html += '<div id="config-tab">';
+        html += '<input type="hidden" name="malad_enable">';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Basic Configuration</div>';
+        html += '  <div class="section content">';
+        html += createFormFields([
+                { title: 'Enable', name: 'f_malad_enable', type: 'checkbox', value: nvram.malad_enable == '1' }
+            ]);
+        html += '  </div>';
+        html += ' </div>';
+        html += '</div>';
+
+        // Sources tab
+        html += '<div id="sources-tab">';
+        html += ' <input type="hidden" name="malad_dflt">';
+        html += ' <input type="hidden" name="malad_xtra">';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Default Sources</div>';
+        html += '  <div class="section content">';
+        html += '   <table class="line-table" id="dflt-grid"></table>';
+        html += '  </div>';
+        html += ' </div>';                
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Extra Sources</div>';
+        html += '  <div class="section content">';
+        html += '   <table class="line-table" id="xtra-grid"></table>';
+        html += '  </div>';
+        html += ' </div>';
+        html += '</div>';
+
+
+        // Lists tab
+        html += '<div id="lists-tab">';
+        html += ' <input type="hidden" name="malad_wtl">';
+        html += ' <input type="hidden" name="malad_bkl">';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Whitelist</div>';
+        html += '  <div class="section content">';
+        html += '   <table class="line-table" id="wtl-grid"></table>';
+        html += '  </div>';
+        html += ' </div>';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Blacklist</div>';
+        html += '  <div class="section content">';
+        html += '   <table class="line-table" id="bkl-grid"></table>';
+        html += '  </div>';
+        html += ' </div>';
+        html += '</div>';
+
+        // Status tab
+        html += '<div id="status-tab">';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Status</div>';
+        html += '  <div class="section content">';
+        html += '  Blocked Domains: XXX';
+        html += '  Ads blocked: XXX';
+        html += '  </div>';
+        html += ' </div>';
+        html += '</div>';
+
+        // End of tabs
+        html += '</div>';
+        $('#advanced-maladware').html(html);
     </script>
-</div>
-
-<div class="box" data-box=""> 
-<div class="heading">Default Sources</div>
-<div class="section content">
-<table class="line-table" id="dflt-grid"></table>
-<hr/>
-<p>Help</p>
-</div>
-</div>                  
-
-<div class="box" data-box="">
-<div class="heading">Extra Sources</div>
-<div class="section content">
-<table class="line-table" id="xtra-grid"></table><br />  
-<hr/>
-<p>Help</p>
-</div>
-</div>
-
-<div class="box" data-box="">
-<div class="heading">Whitelist</div>
-<div class="section content">
-<table class="line-table" id="wtl-grid"></table>
-<hr/>
-<p>Help</p>
-<p>These are always allowed and will never be blocked (grep -f wl.txt -v domains.txt)</p>
-</div>
-</div>
-
-<div class="box" data-box="">
-<div class="heading">Blacklist</div>
-<div class="section content">
-<table class="line-table" id="bkl-grid"></table>
-<hr/>
-<p>Help</p>
-<p>These will always be blocked (append to end)</p>
-</div>
 </div>
 
 <button type="button" value="Save" id="save-button" onclick="save()" class="btn btn-primary">Save <i class="icon-check"></i></button>
