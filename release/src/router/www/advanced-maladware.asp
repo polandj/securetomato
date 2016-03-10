@@ -211,13 +211,39 @@
 
         form.submit('_fom', 1);
     }
-   
+  
+    function updateElement(id, cmdresult) {
+        E(id).innerHTML = escapeText(cmdresult).replace('<br>', '').replace('&nbsp;','')
+    }
+
+    function escapeText(s) {
+        function esc(c) {
+            return '&#' + c.charCodeAt(0) + ';';
+        }
+        return s.replace(/[&"'<>]/g, esc).replace(/\n/g, ' <br>').replace(/ /g, '&nbsp;');
+    }
+    
+    function fetchElement(id, cmdline) {
+        cmd = new XmlHttp();
+        cmd.onCompleted = function(text, xml) {
+            eval(text);
+            updateElement(id, cmdresult);
+        }
+        cmd.onError = function(x) {
+            cmdresult = 'ERROR: ' + x;
+            updateElement(id, cmdresult);
+        }
+
+        cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(cmdline.replace(/\r/g, '')));
+    }
+
     function earlyInit(){
         tabSelect(cookie.get('advanced_maladware_tab') || 'config');
         dflt.setup();
         xtra.setup();
         wtl.setup();
         bkl.setup();
+        fetchElement('blocked_domain_count', 'tail -n1 /var/lib/adblock/blocklist | cut -d" " -f2');
         init();
     }
     function init() {
@@ -295,8 +321,8 @@
         html += ' <div class="box" data-box="">';
         html += '  <div class="heading">Status</div>';
         html += '  <div class="section content">';
-        html += '  Blocked Domains: XXX';
-        html += '  Ads blocked: XXX';
+        html += '   <table>'
+        html += '     <tr><td>Blocked Domains</td><td id="blocked_domain_count">...</td></tr>';
         html += '  </div>';
         html += ' </div>';
         html += '</div>';

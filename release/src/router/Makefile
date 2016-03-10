@@ -38,11 +38,9 @@ obj-y += others
 obj-y += busybox
 obj-y += httpd
 obj-y += www
-obj-y += wwwAT
 obj-y += bridge
 obj-$(TCONFIG_DNSSEC) += nettle
 obj-y += dnsmasq
-obj-y += etc
 # obj-y += vlan # use Busybox vconfig
 obj-y += pppd
 obj-y += rp-pppoe
@@ -254,6 +252,7 @@ else
 endif
 
 obj-y += wanuptime
+obj-y += adblock
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
