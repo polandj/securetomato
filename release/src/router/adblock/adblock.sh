@@ -9,13 +9,6 @@
 ## See adblock.readme for release notes
 ##
 
-#########################################################
-#							#
-# Static values - these cannot / should not be changed  #
-# in the config file.					#
-#							#
-#########################################################
-
 umask 0022
 
 alias iptables='/usr/sbin/iptables'
@@ -63,41 +56,6 @@ else
 	islink=0
 fi
 
-# base name to use when looking for config files
-configname=adblock
-
-# legacy config file
-config=$binprefix/config
-
-# list of config files to look for if legacy file is missing
-# use a fully pathed name if custonizing
-# first match found wins
-ini="$configname.ini"
-configlist="$binprefix/$ini
-  $binprefix/$configname/$ini
-  /jffs/$configname/$ini
-  /jffs/etc/$ini
-  /jffs/$ini
-  /opt/$configname/$ini
-  /opt/etc/$ini
-  /opt/$ini
-  /mmc/$configname/$ini
-  /mmc/etc/$ini
-  /mmc/$ini
-  /cifs1/$configname/$ini
-  /cifs1/etc/$ini
-  /cifs1/$ini
-  /cifs2/$configname/$ini
-  /cifs2/etc/$ini
-  /cifs2/$ini
-  /tmp/$configname/$ini
-  /tmp/$ini
-"
-#########################################################
-# End of static values					#
-#########################################################
-
-
 #########################################################
 #							#
 # Default values - can be changed in config file.	#
@@ -105,7 +63,7 @@ configlist="$binprefix/$ini
 #########################################################
 
 # path to list files
-prefix=$binprefix
+prefix=/var/lib/adblock
 
 # pixelserv executable
 pixelbin=$binprefix/pixelserv
@@ -150,21 +108,18 @@ listtmp=""
 # list of generated source files
 sourcelistfile=$tmp/sourcelist.$$.tmp
 
-# default cron schedule standard cru format
-schedule="10 02 * * *"
+# default cron schedule standard cru format: min hour day month week
+schedule="55 04 1 * *" # Mondays at 4:55AM
 cronid=adblock.update
 
 # minimum age of blocklist in hours before we re-build
-age2update=4
+age2update=12
 
 # symlink for web interface
 weblink=/www/user/adblock.sh
 
 # script for web interface
 webscript=adblockweb.sh
-
-# Add Adblock link to Tomato GUI
-tomatolink=1
 
 # don't output log for cgi wrapper mode
 quietcgi=1
@@ -223,7 +178,8 @@ FWBRIDGE="br+ lo"
 
 # set haarp config defaults - config file overrides
 # 0: disable pixelserv, 1-254: last octet of IP to run pixelserv on
-PIXEL_IP=254
+PIXEL_IP=$(nvram get malad_pip)
+[ "$PIXEL_IP" = "" ] && PIXEL_IP=254 || PIXEL_IP=$PIXEL_IP
 
 # let system determin pixelserv ip based on PIXEL_IP and existing
 redirip=""
@@ -238,9 +194,31 @@ RAMLIST=0
 CONF=/etc/dnsmasq.custom
 
 # whitelist and blacklist contents
-BLACKLIST=""
-WHITELIST=""
+BLACKLIST="$(nvram get malad_bkl)"
+WHITELIST="$(nvram get malad_wtl)"
 
+SOURCES=""
+XTRA_SOURCES="$(nvram get malad_xtra)"
+for name in $(echo "$XTRA_SOURCES" | awk 'BEGIN{FS=">"}{print $1,$NF;}'); do
+        enabled=$(echo "$name" | cut -d "<" -f 1)
+        url=$(echo "$name" | cut -d "<" -f 2)
+        if [ $enabled = "1" ]; then
+                SOURCES="$SOURCES $url"
+        fi
+done
+DFLT_SOURCES="http://adaway.org/hosts.txt"
+DFLT_SOURCES="$DFLT_SOURCES http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext"
+DFLT_SOURCES="$DFLT_SOURCES http://winhelp2002.mvps.org/hosts.txt"
+DFLT_SOURCES="$DFLT_SOURCES http://someonewhocares.org/hosts/hosts"
+DFLT_SOURCES="$DFLT_SOURCES http://www.malwaredomainlist.com/hostslist/hosts.txt"
+DFLT_SOURCES="$DFLT_SOURCES http://adblock.gjtech.net/?format=unix-hosts"
+DFLT_SOURCES="$DFLT_SOURCES http://hosts-file.net/ad_servers.txt"
+for s in $DFLT_SOURCES; do
+        md5abbrev="$(echo $s | md5sum | cut -c 1-8)"
+        if ! echo $(nvram get malad_dflt) | grep -q $md5abbrev; then
+                SOURCES="$SOURCES $s"
+        fi
+done
 
 #########################################################
 # End of default values					#
@@ -312,8 +290,6 @@ logvars() {
 	ls -lh $listprefix | elog - 4
 	elog "listtmp folder - $listtmp"
 	ls -lh $listtmp | elog - 4
-	elog "config file contents - $config"
-	cat $config | elog - 4
 	logfw
 }
 
@@ -481,9 +457,8 @@ cleanfiles() {
 	rm -f $blocklist  &> /dev/null
 	rm -f $weblink  &> /dev/null
 	rm -f $weblink.weblink  &> /dev/null
-	rmtomatolink
 	elog "The following files remain for manual removal:"
-	ls -1Ad $me $config $listprefix/* $prefix/* 2>/dev/null| sort -u | elog - 4
+	ls -1Ad $me $listprefix/* $prefix/* 2>/dev/null| sort -u | elog - 4
 }
 
 shutdown() {
@@ -538,41 +513,6 @@ fire() {
 		iptables -A $chain -i $i -p all -j REJECT --reject-with icmp-host-prohibited
 	done
 	[ "$FWRULES" = "STRICT" ] &&  iptables -A $chain -j $drop
-}
-
-rmtomatolink() {
-	if grep -q "/www/tomato.js" /proc/mounts ; then
-		if [ -f "$jsflag" ]; then
-			umount /www/tomato.js
-		else
-			elog "tomatos.js was mounted by something else"
-			mountjs=0
-		fi
-	fi
-	rm -f "$jsfile"
-	rm -f "$jsflag"
-}
-
-addtomatolink() {
-	if [ "$tomatolink" = "1" ]; then
-		mountjs=1
-		if [ "$web_dir" != "" ] && [ "$web_dir" != "default" ]; then
-			elog "Skip adding tomato link, non default web_dir($web_dir)"
-			mountjs=0
-		elif ! grep -q "'log.asp'] ] ],$" /www/tomato.js ; then
-			elog "Skip adding tomato link, could not find insertion point in tomato.js"
-			mountjs=0
-		fi
-		rmtomatolink
-		if [ "$mountjs" = "1" ]; then
-			elog "Adding tomato menu item"
-			sed "/'log.asp'] ] ],$/ a  ['Adblock', '${weblink#*/www/}\" target=\"adblock\"']," /www/tomato.js > "$jsfile"
-			mount -o bind  "$jsfile" /www/tomato.js
-			touch "$jsflag"
-		fi
-	else
-		rmtomatolink
-	fi
 }
 
 cleanfire() {
@@ -772,63 +712,6 @@ confgen() {
 }
 
 loadconfig() {
-	ignoredlist=""
-	configfound="0"
-
-	# look for haarp config file, but since "config" is so generic
-	# do at least a minimal check with grep on the contents
-	[ -f $config ] && grep -q "SOURCES=" $config && {
-		# haarp legacy single folder mode
-		# everything defaults to the script location
-		configfound="1"
-	}
-	# if haarp legacy config does not exist, try to find another file
-	for c in $configlist; do
-		[ -f $c -a "$configfound" = "0" ] && grep -q "SOURCES=" $c && {
-			cfolder=$(dirname $c)
-			# if config is already in a folder named "adblock" use it, otherwise create an adblock subfolder
-			[ "${cfolder##*"/"}" = "$configname" ] && prefix=$cfolder || prefix=$cfolder/$configname
-			config=$c
-			configfound=1
-		} || {
-			[ -f $c ] && ignoredlist="$ignoredlist $c"
-		}
-	done
-
-	elog "Using config file $config"
-
-	# Warn other files were found but ignored
-	for c in $ignoredlist; do
-		elog "Ignoring extra config file $c"
-	done
-
-	[ -f "$config" ] || {
-		elog "$config not found!"
-		pexit 11
-	}
-
-	grep -q "SOURCES=" "$config" || {
-		elog "$config does not seem valid!"
-		pexit 11
-	}
-
-	# silently check for/create prefix folder
-	# but don't exit yet if we fail - we may redefine in config
-	[ -d "$prefix" ] || {
-		mkdir "$prefix" &>/dev/null
-		oldprefix=$prefix
-		createdprefix=1
-	}
-
-	#ensure tthe correct path
-	cd "$prefix" &>/dev/null
-
-	# load config
-	source "$config"
-
-	# if we created the prefix folder, but aren't using it, remove it.
-	[ "$prefix" != "$oldprefix" -a "$createdprefix" = "1" ] && rmdir "$oldprefix" &> /dev/null
-
 	# check prefix folder again - exit on fail this time
 	[ -d "$prefix" ] || mkdir "$prefix" || {
 		elog "Prefix folder ($prefix) does not exist and cannot be created"
@@ -929,8 +812,6 @@ loadconfig() {
 		fi
 	fi
 
-	jsfile="$(dirname $weblink)/tomato.js.adblock"
-	jsflag="$jsfile.mount"
 	web_dir="$(nvram get web_dir)"
 
 	currentmode=OFF
@@ -943,7 +824,7 @@ loadconfig() {
 	whitelist="$prefix/whitelist"
 	blacklist="$prefix/blacklist"
 
-	thisconfig="$config:$(date -r "$config" 2>/dev/null)"
+	thisconfig="$(echo "$SOURCES" | md5sum)"
 	thisconfig="$thisconfig|$whitelist:$(date -r "$whitelist" 2>/dev/null)"
 	thisconfig="$thisconfig|$blacklist:$(date -r "$blacklist" 2>/dev/null)"
 	thisconfig="$thisconfig|$adblockscript:$(date -r "$adblockscript" 2>/dev/null)"
@@ -1047,15 +928,12 @@ if [ "$weblink" != "" ] &&  [ -x "$binprefix/$webscript" -o -x "$( which "$websc
 		elog "Creating web link $weblink"
 		elog "Web interface should be available at http://$(nvram get lan_ipaddr)$lanport/user/${weblink##*/}"
 		echo "$weblink" >  $weblink.weblink
-		addtomatolink
 	else
 		elog "ERROR - could not create web link $weblink"
 	fi
 else
 	elog "ERROR - Web Script $webscript not found or not executable!"
 fi
-
-echo "$@" | grep -q debug && debug=1
 
 for p in $@
 do
@@ -1079,30 +957,21 @@ case "$p" in
 		cru d $cronid
 		pexit 0
 		;;
-	"toggle")
-		[ $currentmode != "OFF" ] && {
-			logvars
-			elog "Processing '$p' option, remaining options ignored"
-			stop
-			pexit 0
-		}
-		;;
 	"cron")
 		cru a $cronid "$schedule  $me update"
 		;;
 	"force")
 		force="1"
 		;;
-	"restart")
-		stop
-		;;
 	"update")
 		update="1"
 		;;
 	"debug")
+		debug="1"
 		;;
 	*)
-		elog "'$p' not understood! - no action taken"
+		elog "'$p' not understood! - no action taken."
+		elog "Options: {force|debug} (clean|fire|stop|cron|update)"
 		pexit 1
 		;;
 esac
@@ -1112,7 +981,7 @@ logvars
 
 [ $currentmode != "OFF" ] && elog "Blocklist active in $currentmode mode"
 
-# rebuild blocklist if script, config, whitelist or blacklist has changed
+# rebuild blocklist if script, sources, whitelist or blacklist has changed
 [ "$thisconfig" != "$lastconfig" ] && {
 	elog "Config or script has changed - rebuilding list"
 	restartpix=1
@@ -1153,4 +1022,3 @@ echo "$thisconfig" > "$prefix/lastmod-config"
 
 pexit 0
 
-#
