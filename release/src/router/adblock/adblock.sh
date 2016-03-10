@@ -109,7 +109,8 @@ listtmp=""
 sourcelistfile=$tmp/sourcelist.$$.tmp
 
 # default cron schedule standard cru format: min hour day month week
-schedule="55 04 1 * *" # Mondays at 4:55AM
+SCHEDULE="$(nvram get malad_cron)"
+[ "$SCHEDULE" = "" ] && SCHEDULE="55 04 1 * *" 
 cronid=adblock.update
 
 # minimum age of blocklist in hours before we re-build
@@ -179,7 +180,7 @@ FWBRIDGE="br+ lo"
 # set haarp config defaults - config file overrides
 # 0: disable pixelserv, 1-254: last octet of IP to run pixelserv on
 PIXEL_IP=$(nvram get malad_pip)
-[ "$PIXEL_IP" = "" ] && PIXEL_IP=254 || PIXEL_IP=$PIXEL_IP
+[ "$PIXEL_IP" = "" ] && PIXEL_IP=254
 
 # let system determin pixelserv ip based on PIXEL_IP and existing
 redirip=""
@@ -958,13 +959,13 @@ case "$p" in
 		pexit 0
 		;;
 	"cron")
-		cru a $cronid "$schedule  $me update"
+		cru a $cronid "$SCHEDULE $me update"
 		;;
 	"force")
-		force="1"
+		force="1" # Forces SOURCES to be redownloaded
 		;;
 	"update")
-		update="1"
+		update="1" # Update even if we've done it with age2update
 		;;
 	"debug")
 		debug="1"

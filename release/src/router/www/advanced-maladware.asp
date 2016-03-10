@@ -1,7 +1,7 @@
 <title>Malware/Adware Blocking</title>
 <content>
 <script type="text/javascript">
-//	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
+//	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_cron,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
     var tabs = [['config', 'Config'],['sources', 'Sources'],['lists', 'Lists'],['status', 'Status']];
     function tabSelect(name) {
         tgHideIcons();
@@ -13,6 +13,7 @@
             elem.display(tabs[i][0] + '-tab', on);
         }
     }
+    function verifyFields() {}
 
     /* Default Sources */
     var dflt_sources = [
@@ -171,6 +172,10 @@
         fom = E('_fom');
 
         fom.malad_enable.value = E('_f_malad_enable').checked ? 1 : 0;
+        if (fom.malad_enable.value == 0) {
+            fom._service.value = 'adblock-stop';
+        }
+        fom.malad_cron.value = "55 4 " + E('_f_malad_cron').value + " * *";
 
         var dflts = dflt.getAllData();
         r = [];
@@ -243,7 +248,8 @@
         xtra.setup();
         wtl.setup();
         bkl.setup();
-        fetchElement('blocked_domain_count', 'tail -n1 /var/lib/adblock/blocklist | cut -d" " -f2');
+        fetchElement('blocklist_count', 'tail -n1 /var/lib/adblock/blocklist | cut -d" " -f2');
+        fetchElement('blocklist_date', 'head -1 /var/lib/adblock/blocklist | grep -o "generated .*" | cut -f3- -d" "');
         init();
     }
     function init() {
@@ -256,6 +262,7 @@
 
 <form id="_fom" method="post" action="tomato.cgi">
 <input type="hidden" name="_nextpage" value="/#advanced-maladware.asp">
+<input type="hidden" name="_service" value="adblock-restart">
 
 <div id="advanced-maladware">
     <script type="text/javascript">
@@ -269,11 +276,13 @@
         // Config Tab
         html += '<div id="config-tab">';
         html += '<input type="hidden" name="malad_enable">';
+        html += '<input type="hidden" name="malad_cron">';
         html += ' <div class="box" data-box="">';
         html += '  <div class="heading">Basic Configuration</div>';
         html += '  <div class="section content">';
         html += createFormFields([
-                { title: 'Enable', name: 'f_malad_enable', type: 'checkbox', value: nvram.malad_enable == '1' }
+                { title: 'Enable', name: 'f_malad_enable', type: 'checkbox', value: nvram.malad_enable == '1' },
+                { title: 'Refresh Sources', name: 'f_malad_cron', type: 'select', options: [['0','Sun'],['1','Mon'],['2','Tue'],['3','Wed'],['4','Thu'],['5','Fri'],['6', 'Sat']], value: nvram.malad_cron.split(' ')[2]}
             ]);
         html += '  </div>';
         html += ' </div>';
@@ -322,7 +331,8 @@
         html += '  <div class="heading">Status</div>';
         html += '  <div class="section content">';
         html += '   <table>'
-        html += '     <tr><td>Blocked Domains</td><td id="blocked_domain_count">...</td></tr>';
+        html += '     <tr><td>Blocklist Count</td><td id="blocklist_count">...</td></tr>';
+        html += '     <tr><td>Last updated</td><td id="blocklist_date">...</td></tr>';
         html += '  </div>';
         html += ' </div>';
         html += '</div>';
