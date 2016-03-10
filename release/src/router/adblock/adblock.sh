@@ -21,7 +21,7 @@ pidfile=/var/run/adblock.pid
 
 release="2015-11-11"
 
-# buffer for log messages in cgimode or firemode
+# buffer for log messages in firemode
 msgqueue=""
 
 # router memory
@@ -30,22 +30,12 @@ ram=$(awk '/^MemTotal/ {print int($2/1024)}' < /proc/meminfo)
 # this script
 me="$(cd $(dirname "$0") && pwd)/${0##*/}"
 
-# Is this run as CGI?
-[ -n "$REQUEST_METHOD" ] && cgimode=1
-
 [ "${me##*"."}" = "fire" ] && firemode=1
 
 # path to script -  was script called via an autorun link?
 if [ "${me##*"."}" = "fire" -o "${me##*"."}" = "wanup" -o  "${me##*"."}" = "shut" ]; then
 	# yes - find true script folder
  	s="$( ls -l "$me" )"; s="${s##*" -> "}"
-	binprefix="$(cd "$(dirname "$me")" && cd "$(dirname "$s")" && pwd)"
-	adblockscript="$binprefix/${s##*"/"}"
-	islink=1
-elif [ -L $me -a "$cgimode" = "1" -a -e $me.weblink ]; then
-	# called via a link, we are in cgi environment, and weblink file exists
-	# so follow the link for binprefix location
-	s="$( ls -l "$me" )"; s="${s##*" -> "}"
 	binprefix="$(cd "$(dirname "$me")" && cd "$(dirname "$s")" && pwd)"
 	adblockscript="$binprefix/${s##*"/"}"
 	islink=1
@@ -80,9 +70,6 @@ smalltmp=24
 # firewall autorun script
 fire=/etc/config/99.adblock.fire
 
-# wanup autorun script
-wanup=/etc/config/99.adblock.wanup
-
 # shutdown autorun script
 shut=/etc/config/00.adblock.shut
 
@@ -115,15 +102,6 @@ cronid=adblock.update
 
 # minimum age of blocklist in hours before we re-build
 age2update=12
-
-# symlink for web interface
-weblink=/www/user/adblock.sh
-
-# script for web interface
-webscript=adblockweb.sh
-
-# don't output log for cgi wrapper mode
-quietcgi=1
 
 # don't output log for firewall mode
 quietfire=1
@@ -234,7 +212,7 @@ elog() {
 
  local p1=${1:-"-"}
 
- [ "$cgimode" = "1" -o "$firemode" = "1" ] && {
+ [ "$firemode" = "1" ] && {
    [ "$p1" = "-" ] &&  {
      [ -t 0 ] || while read myline; do msgqueue="$msgqueue""$pad$myline\n" ; done
    } || msgqueue="$msgqueue""$pad$p1\n"
@@ -246,9 +224,8 @@ elog() {
 }
 
 flushlog() {
-# display queue and disable cgi/fire modes
+# display queue and disable fire modes
  [ "$msgqueue" != "" ] && {
-	cgimode=0
 	firemode=0
 	[ "$msgqueue" != "" ] && echo -ne "$msgqueue" | elog
 	msgqueue=""
@@ -456,8 +433,6 @@ cleanfiles() {
 	rm -f $prefix/source-* &> /dev/null
 	rm -f $tmpstatus &> /dev/null
 	rm -f $blocklist  &> /dev/null
-	rm -f $weblink  &> /dev/null
-	rm -f $weblink.weblink  &> /dev/null
 	elog "The following files remain for manual removal:"
 	ls -1Ad $me $listprefix/* $prefix/* 2>/dev/null| sort -u | elog - 4
 }
@@ -837,65 +812,6 @@ elog "Running as $me $@"
 
 loadconfig
 
-if [ -L $me -a "$cgimode" = "1" -a -e $me.weblink ]; then
- 	if [ "$me" != "$(cat "$me.weblink")" ]; then
-		# apparently called as cgi wrapper, but name doesn't match
-    		elog "<br>"
-		elog "weblink file exists in script folder but running script name does not match <br>"
-		elog "script name: $me, weblink value: $(cat $me.weblink) <br>"
-		pexit 20
-	fi
-fi
-
-
-# if called via weblink, execute $webscript
-if [ "$me" = "$weblink" ]; then
-	for e in $(set | grep "^web.*=")
-	do
-		export "${e%=*}"
-	done
-	export adblockscript
-	export binprefix
-	export blacklist
-	export blocklist
-	export chain
-	export config
-	export dnsmasq_config
-	export hostlink
-	export listprefix
-	export modehost
-	export pixelbin
-	export prefix
-	export redirip
-	export release
-	export testhost
-	export weblink
-	export webscript
-	export whitelist
-	export FWBRIDGE
-	export PIXEL_IP
-	export LISTMODE
-	export thisconfig
-	export lastconfig
-	if [ -x "$binprefix/$webscript" ]; then
-		# use the script in this folder if it exists
-		export webscript="$binprefix/$webscript"
-	elif [ -x "$( which "$webscript" )" ]; then
-		export webscript
-	else
-		echo "<html><head><title>Adblock Web Error</title></head><body>
-			ERROR: Web Script $webscript not found or not executable!</body></html>"
-		elog "ERROR: Web Script $webscript not found or not executable!"
-		pexit 0  &> /dev/null
-	fi
-	elog "Executing $webscript QUERY_STRING="$QUERY_STRING""
-	"$webscript"
-	[ "$quietcgi" = "1" ] && exit 0 || pexit 0 &> /dev/null
-fi
-
-# display queue and disable cgi mode
-[ "$cgimode" = "1" ] && flushlog
-
 # exit if another instance is running
 kill -0 $(cat $pidfile 2>/dev/null) &>/dev/null && {
 	flushlog
@@ -919,21 +835,6 @@ if [ "$me" = "$shut" ]; then
 	elog "System shutdown"
 	shutdown
 	pexit 0
-fi
-
-# write weblink
-if [ "$weblink" != "" ] &&  [ -x "$binprefix/$webscript" -o -x "$( which "$webscript" )" ]; then
-	if ln -sf "$me" "$weblink" ; then
-		local lanport=$(nvram get http_lanport)
-		[ "$lanport" = 80 -o "$lanport" = "" ] && lanport="" || lanport=":$lanport"
-		elog "Creating web link $weblink"
-		elog "Web interface should be available at http://$(nvram get lan_ipaddr)$lanport/user/${weblink##*/}"
-		echo "$weblink" >  $weblink.weblink
-	else
-		elog "ERROR - could not create web link $weblink"
-	fi
-else
-	elog "ERROR - Web Script $webscript not found or not executable!"
 fi
 
 for p in $@
