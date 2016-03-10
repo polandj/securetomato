@@ -515,6 +515,11 @@ extern void stop_tinc();
 extern void run_tinc_firewall_script();
 #endif
 
+// adblock.c
+extern void start_adblock();
+extern void start_adblock_wanup();
+extern void stop_adblock();
+
 // new_qoslimit.c
 extern void ipt_qoslimit(int chain);
 extern void new_qoslimit_start(void);

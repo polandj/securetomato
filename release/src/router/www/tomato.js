@@ -388,6 +388,18 @@ function v_port(e, quiet)
 	return _v_range(e, quiet, 1, 0xFFFF, 'port');
 }
 
+function v_url(e, quiet)
+{
+    if ((e = E(e)) == null) return 0;
+    var v = e.value;
+    if ((!v.match(/^ *(ftp|http):\/\/[^ "]+ *$/))) {
+        ferror.set(e, 'Invalid url.  Valid syntax: (ftp|http)://...', quiet)
+            return false;
+    }
+    ferror.clear(e);
+    return true;
+}
+
 function v_octet(e, quiet)
 {
 	return _v_range(e, quiet, 1, 254, 'address');
@@ -1643,9 +1655,14 @@ TomatoGrid.prototype = {
 		c = r.insertCell(0);
 		c.colSpan = this.header.cells.length;
 		if (which == 'edit') {
-			c.innerHTML = '<button type="button" class="btn btn-danger" value="Delete" onclick="TGO(this).onDelete()">Delete <i class="icon-cancel"></i></button> ' +
+            if (this.canDelete) {
+			    c.innerHTML = '<button type="button" class="btn btn-danger" value="Delete" onclick="TGO(this).onDelete()">Delete <i class="icon-cancel"></i></button> ' +
 			'<button type="button" class="btn" value="Cancel" onclick="TGO(this).onCancel()">Cancel <i class="icon-disable"></i></button> ' +
 			'<button type="button" class="btn btn-primary" value="OK" onclick="TGO(this).onOK()">OK <i class="icon-check"></i></button>';
+            } else {
+                c.innerHTML = '<button type="button" class="btn" value="Cancel" onclick="TGO(this).onCancel()">Cancel <i class="icon-disable"></i></button> ' +
+                    '<button type="button" class="btn btn-primary" value="OK" onclick="TGO(this).onOK()">OK <i class="icon-check"></i></button>';
+            }
 		}
 		else {
 			c.innerHTML =
@@ -2479,6 +2496,7 @@ function navi()
 			'Captive Portal':       'advanced-splashd.asp',
 			/* NOCAT-END */
 			'MAC Address':          'advanced-mac.asp',
+			'Malware/Adware':       'advanced-maladware.asp',
 			'Miscellaneous':        'advanced-misc.asp',
 			'Routing':              'advanced-routing.asp',
 			/* TOR-BEGIN */

@@ -1062,6 +1062,9 @@ void start_wan_done(char *wan_ifname)
 		start_pptp_client();
 #endif
 
+	if (wanup)
+		start_adblock_wanup();
+
 	unlink(wan_connecting);
 
 	new_qoslimit_start(); //!! RAF

@@ -2921,6 +2921,12 @@ TOP:
 	}
 #endif
 
+	if (strcmp(service, "adblock") == 0) {
+		if (action & A_STOP) stop_adblock();
+		if (action & A_START) start_adblock();
+		goto CLEAR;
+	}
+
 #ifdef TCONFIG_NOCAT
 	if (strcmp(service, "splashd") == 0) {
 		if (action & A_STOP) stop_splashd();
