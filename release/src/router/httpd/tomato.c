@@ -792,11 +792,13 @@ static const nvset_t nvset_list[] = {
 
 // advanced-maladware
 	{ "malad_enable",		V_01			},
+	{ "malad_mode",			V_LENGTH(0, 1)		},
 	{ "malad_cron",			V_LENGTH(0, 16)		},
 	{ "malad_dflt",			V_LENGTH(0, 100)	},
 	{ "malad_xtra",			V_LENGTH(0, 115 * 5)	},
 	{ "malad_wtl", 			V_LENGTH(0, 51 * 25)	},
 	{ "malad_bkl",			V_LENGTH(0, 51 * 25)	},
+
 // advanced-misc
 	{ "wait_time",			V_RANGE(3, 20)		},
 	{ "wan_speed",			V_RANGE(0, 4)		},

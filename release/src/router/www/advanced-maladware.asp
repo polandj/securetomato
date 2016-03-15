@@ -1,8 +1,39 @@
 <title>Malware/Adware Blocking</title>
 <content>
 <script type="text/javascript">
-//	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_cron,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
-    var tabs = [['config', 'Config'],['sources', 'Sources'],['lists', 'Lists'],['status', 'Status']];
+//	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_mode,malad_cron,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
+    var pxld = {"uts": "uptime in seconds",
+                "req": "number of connection requests",
+                "avg": "average request size in bytes",
+                "rmx": "maximum request size in bytes",
+                "tav": "average request processing time in milliseconds",
+                "tmx": "maximum request processing time in milliseconds", 
+                "err": "number of connections resulting in processing errors (syslog may have details)", 
+                "tmo": "number of connections that timed out while trying to read a request from the client",
+                "cls": "number of connections that were closed by the client while reading or replying to the request",
+                "nou": "number of requests that failed to include a URL",
+                "pth": "number of requests for a path that could not be parsed",
+                "nfe": "number of requests for a file with no extension",
+                "ufe": "number of requests for an unrecognized/unhandled file extension",
+                "gif": "number of requests for GIF images",
+                "bad": "number of requests for unrecognized/unhandled HTTP methods",
+                "txt": "number of requests for plaintext data formats",
+                "jpg": "number of requests for JPEG images",
+                "png": "number of requests for PNG images",
+                "swf": "number of requests for Adobe Shockwave Flash files",
+                "ico": "number of requests for ICO files (usually favicons)",
+                "slh": "number of HTTPS requests with a good certifcate (cert exists and used)",
+                "slm": "number of HTTPS requests without a certficate (cert missing for ad domain)",
+                "sle": "number of HTTPS requests with a bad cert (error in existing cert)",
+                "slu": "number of unrecognized HTTPS requests (none of slh/slm/sle)",
+                "sta": "number of requests for HTML stats",
+                "stt": "number of requests for plaintext stats",
+                "204": "number of requests for /generate_204 URLs",
+                "rdr": "number of requests resulting in a redirect",
+                "pst": "number of requests for HTTP POST method",
+                "hed": "number of requests for HTTP HEAD method"}
+
+    var tabs = [['config', 'Config'],['sources', 'Sources'],['lists', 'Lists'],['certs', 'Certificates'], ['status', 'Status']];
     function tabSelect(name) {
         tgHideIcons();
         cookie.set('advanced_maladware_tab', name);
@@ -175,6 +206,7 @@
         if (fom.malad_enable.value == 0) {
             fom._service.value = 'adblock-stop';
         }
+        fom.malad_mode.value = E('_f_malad_mode').value;
         fom.malad_cron.value = "55 4 " + E('_f_malad_cron').value + " * *";
 
         var dflts = dflt.getAllData();
@@ -238,18 +270,38 @@
             cmdresult = 'ERROR: ' + x;
             updateElement(id, cmdresult);
         }
-
         cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(cmdline.replace(/\r/g, '')));
     }
 
+    function fetchStats(id, cmdline) {
+        cmd = new XmlHttp();
+        cmd.onCompleted = function(text, xml) {
+            html = '';
+            eval(text);
+            stats = cmdresult.split(', ');
+            for (j = 0; j < stats.length; j++) {
+                parts = stats[j].split(' ');
+                if (parseInt(parts[0]) > 0) {
+                    html += '<tr><td>'+pxld[parts[1].trim()]+'</td><td>'+parts[0]+'</td></tr>';
+                }
+            }
+            E(id).innerHTML = html;
+        }
+        cmd.onError = function(x) {
+            cmdresult = 'ERROR: ' + x;
+            E(id).innerHTML = escapeText(cmdresult).replace('<br>', '').replace('&nbsp;','');
+        }
+        cmd.post('shell.cgi', 'action=execute&command=' + escapeCGI(cmdline.replace(/\r/g, '')));
+    }
     function earlyInit(){
         tabSelect(cookie.get('advanced_maladware_tab') || 'config');
         dflt.setup();
         xtra.setup();
         wtl.setup();
         bkl.setup();
-        fetchElement('blocklist_count', 'tail -n1 /var/lib/adblock/blocklist | cut -d" " -f2');
-        fetchElement('blocklist_date', 'head -1 /var/lib/adblock/blocklist | grep -o "generated .*" | cut -f3- -d" "');
+        fetchElement('blocklist_count', 'tail -n1 /etc/adblock/blocklist | cut -d" " -f2');
+        fetchElement('blocklist_date', 'head -1 /etc/adblock/blocklist | grep -o "generated .*" | cut -f3- -d" "');
+        fetchStats('pixelserv_stats', 'wget -qO- http://adblock.is.loaded/servstats.txt | tail -1');
         init();
     }
     function init() {
@@ -276,13 +328,15 @@
         // Config Tab
         html += '<div id="config-tab">';
         html += '<input type="hidden" name="malad_enable">';
+        html += '<input type="hidden" name="malad_mode">';
         html += '<input type="hidden" name="malad_cron">';
         html += ' <div class="box" data-box="">';
         html += '  <div class="heading">Basic Configuration</div>';
         html += '  <div class="section content">';
         html += createFormFields([
                 { title: 'Enable', name: 'f_malad_enable', type: 'checkbox', value: nvram.malad_enable == '1' },
-                { title: 'Refresh Sources', name: 'f_malad_cron', type: 'select', options: [['0','Sun'],['1','Mon'],['2','Tue'],['3','Wed'],['4','Thu'],['5','Fri'],['6', 'Sat']], value: nvram.malad_cron.split(' ')[2]}
+                { title: 'Mode', name: 'f_malad_mode', type: 'select', options: [['', 'Pixelserv'],['1', 'NO Pixelserv']], value: nvram.malad_mode },
+                { title: 'Refresh blocklist every', name: 'f_malad_cron', type: 'select', options: [['0','Sun'],['1','Mon'],['2','Tue'],['3','Wed'],['4','Thu'],['5','Fri'],['6', 'Sat']], value: nvram.malad_cron.split(' ')[2]}
             ]);
         html += '  </div>';
         html += ' </div>';
@@ -325,14 +379,36 @@
         html += ' </div>';
         html += '</div>';
 
+        // Certificates tab
+        html += '<div id="certs-tab">';
+        html += ' <input type="hidden" name="malad_cacrt">';
+        html += ' <input type="hidden" name="malad_cakey">';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Certificates</div>';
+        html += '  <div class="section content">';
+        html += createFormFields([
+                { title: 'Certificate', name: 'f_malad_cacrt', type: 'textarea', value: '', style: 'width: 100%; height: 80px;'},
+                { title: 'Key', name: 'f_malad_cakey', type: 'textarea', value: '', style: 'width: 100%; height: 80px;'}
+            ]);
+        html += '  </div>';
+        html += ' </div>';
+        html += '</div>';
+
         // Status tab
         html += '<div id="status-tab">';
         html += ' <div class="box" data-box="">';
         html += '  <div class="heading">Status</div>';
         html += '  <div class="section content">';
-        html += '   <table>'
+        html += '   <table>';
         html += '     <tr><td>Blocklist Count</td><td id="blocklist_count">...</td></tr>';
         html += '     <tr><td>Last updated</td><td id="blocklist_date">...</td></tr>';
+        html += '   </table>';
+        html += '  </div>';
+        html += ' </div>';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Pixel Serv</div>';
+        html += '  <div class="section content">';
+        html += '   <table id="pixelserv_stats"></table>';
         html += '  </div>';
         html += ' </div>';
         html += '</div>';

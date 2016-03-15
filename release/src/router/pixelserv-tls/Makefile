@@ -1,4 +1,5 @@
 # basic setup
+include ../common.mak
 
 DISTNAME  := pixelserv
 CC        := gcc
@@ -70,8 +71,11 @@ ARMentSTRIP  := $(ARMentPREFIX)$(STRIP)
 
 .PHONY: all clean distclean printver x86 x86_x64 mips arm tomatoware
 
-all: amd64 arm mips #x86
-	@echo "=== Built all x86 and cross-compiler targets ==="
+all: mips 
+
+install:
+	install -D dist/$(DISTNAME).mips.performance.dynamic $(INSTALLDIR)/bin/pixelserv-tls
+	chmod 0555 $(INSTALLDIR)/bin/pixelserv-tls
 
 clean:
 	@echo "=== Cleaning intermediate build products ==="
@@ -119,14 +123,14 @@ mips: printver dist
 	@echo "=== Building MIPS ==="
 	$(MIPSPATH) $(MIPSCC) $(CFLAGS_D) -o dist/$(DISTNAME).$@.debug.dynamic $(OPTS) $(SRCS) $(LDFLAGS_D) $(SHAREDLIB)
 	$(MIPSPATH) $(MIPSCC) $(CFLAGS_P) -o dist/$(DISTNAME).$@.performance.dynamic $(OPTS) $(SRCS) $(LDFLAGS_P) $(SHAREDLIB)
-	$(MIPSPATH) $(MIPSCC) $(CFLAGS_D) -o dist/$(DISTNAME).$@.debug.static \
+#	$(MIPSPATH) $(MIPSCC) $(CFLAGS_D) -o dist/$(DISTNAME).$@.debug.static \
 	        $(OPTS) $(SRCS) $(STATICLIB) -static $(LDFLAGS_D) $(SHAREDLIB)
-	$(MIPSPATH) $(MIPSCC) $(CFLAGS_P) -o dist/$(DISTNAME).$@.performance.static \
+#	$(MIPSPATH) $(MIPSCC) $(CFLAGS_P) -o dist/$(DISTNAME).$@.performance.static \
 	        $(OPTS) $(SRCS) $(STATICLIB) -static $(LDFLAGS_P) $(SHAREDLIB)
-	$(MIPSPATH) $(MIPSSTRIP) dist/$(DISTNAME).$@.performance.*
+#	$(MIPSPATH) $(MIPSSTRIP) dist/$(DISTNAME).$@.performance.*
 #	$(UPX) dist/$(DISTNAME).$@.performance.*
-	rm -f dist/$(DISTNAME).$(PVERSION).$@.zip
-	$(PCMD) dist/$(DISTNAME).$(PVERSION).$@.zip $(PFILES)
+#	rm -f dist/$(DISTNAME).$(PVERSION).$@.zip
+#	$(PCMD) dist/$(DISTNAME).$(PVERSION).$@.zip $(PFILES)
 
 arm: ARCH = arm
 arm: printver dist

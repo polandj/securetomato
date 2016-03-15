@@ -52,11 +52,25 @@ fi
 #							#
 #########################################################
 
+# Possible places to store our stuff
+freetmp=$(df "/tmp" | awk '!/Filesys/{print int($4/1024)}')
+prefixlist="/mnt/* /mmc/* /jffs"
+prefix=/var/lib
+for p in $prefixlist; do
+	df=$(df "$p" 2> /dev/null | awk '!/File/{print int($4/1024)}')
+	[ "$df" == "" ] && df=0
+	if [ -d "$p/adblock" ]; then
+		prefix=$p
+	elif [ "$df" -gt "$(($freetmp/3))" ]; then
+		prefix=$p
+	fi
+done
+
 # path to list files
-prefix=/var/lib/adblock
+prefix=$prefix/adblock
 
 # pixelserv executable
-pixelbin=$binprefix/pixelserv
+pixelbin=$binprefix/pixelserv-tls
 
 # temp folder for stripped white/blacklist
 tmp=/tmp
@@ -137,7 +151,10 @@ dnsmasq_logqueries=""
 # no validation of the content is performed by adblock
 #
 # !**** CAUTION ****!
-dnsmasq_custom=""
+dnsmasq_custom="
+local-ttl=600
+cache-size=10000
+"
 
 # additional options for wget
 wget_opts=""
@@ -157,14 +174,13 @@ FWBRIDGE="br+ lo"
 
 # set haarp config defaults - config file overrides
 # 0: disable pixelserv, 1-254: last octet of IP to run pixelserv on
-PIXEL_IP=$(nvram get malad_pip)
-[ "$PIXEL_IP" = "" ] && PIXEL_IP=254
+[ "$(nvram get malad_mode)" != "" ] && PIXEL_IP=0 || PIXEL_IP=254
 
 # let system determin pixelserv ip based on PIXEL_IP and existing
 redirip=""
 
 # additional options for pixelserv
-PIXEL_OPTS=""
+PIXEL_OPTS="-l -z $prefix"
 
 # 1: keep blocklist in RAM (e.g. for small JFFS)
 RAMLIST=0
@@ -337,7 +353,7 @@ startserver() {
 }
 
 stopserver() {
-	killall pixelserv
+	killall pixelserv-tls
 	ifconfig $BRIDGE:$vif down
 } &> /dev/null
 
@@ -693,7 +709,7 @@ loadconfig() {
 		elog "Prefix folder ($prefix) does not exist and cannot be created"
         	pexit 12
 	}
-
+	
 	#ensure tthe correct path
 	cd "$prefix" &>/dev/null
 
@@ -749,8 +765,16 @@ loadconfig() {
 		pexit 12
 	}
 
-	freedisk=$(df "$prefix" | awk '!/Filesys/{print int($4/1024)}')
-	freetmp=$(df "$tmp" | awk '!/Filesys/{print int($4/1024)}')
+	# Link /etc/adblock to prefix   
+	if [ ! -L "/etc/adblock" ]; then                 
+		if ! ln -sf "$listprefix" "/etc/adblock" ; then
+			elog "Could not create adblock etc link to listprefix($listprefix)"
+			rm -f /etc/adblock           
+			return                                                  
+		fi                       
+	fi
+
+	local freetmp=$(df "$tmp" | awk '!/Filesys/{print int($4/1024)}')
 	# if listtmp hasn't been explicitly set and more than $smalltmp available on /tmp
 	if [ "$listtmp" = "" -a "$freetmp" -gt "$smalltmp" ]; then
 		# use /tmp for temp blocklist file
@@ -775,7 +799,7 @@ loadconfig() {
 		elog "Logging previously enabled"
 	fi
 
-	dnslogfile="$(readdnsmasq "$dnsmasq_config" "log-facility")"
+	local dnslogfile="$(readdnsmasq "$dnsmasq_config" "log-facility")"
 	if [ "$dnsmasq_logqueries" = "1" -o "$logging" = "1" ]; then
 		if [ "$dnslogfile" = "" ]; then
 			if [ "$(nvram get log_file)" = 1 ]; then
@@ -787,8 +811,6 @@ loadconfig() {
 			elog "Logging to $dnslogfile"
 		fi
 	fi
-
-	web_dir="$(nvram get web_dir)"
 
 	currentmode=OFF
 	nslookup $testhost &>/dev/null  && currentmode=UNKNOWN

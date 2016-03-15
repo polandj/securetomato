@@ -253,10 +253,10 @@ endif
 
 obj-y += wanuptime
 obj-y += adblock
+obj-y += pixelserv-tls
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
-
 
 
 #
