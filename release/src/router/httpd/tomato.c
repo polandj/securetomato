@@ -798,8 +798,8 @@ static const nvset_t nvset_list[] = {
 	{ "malad_xtra",			V_LENGTH(0, 101 * 5)	},
 	{ "malad_wtl", 			V_LENGTH(0, 51 * 25)	},
 	{ "malad_bkl",			V_LENGTH(0, 51 * 25)	},
-	{ "malad_cacrt", 		V_NONE			},
-	{ "malad_cakey",		V_NONE			},
+	{ "malad_cacrt", 		V_TEXT(0, 2048)		},
+	{ "malad_cakey",		V_TEXT(0, 2048)		},
 
 // advanced-misc
 	{ "wait_time",			V_RANGE(3, 20)		},

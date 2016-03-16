@@ -192,6 +192,7 @@ CONF=/etc/dnsmasq.custom
 BLACKLIST="$(nvram get malad_bkl)"
 WHITELIST="$(nvram get malad_wtl)"
 
+# Default data sources
 SOURCES=""
 XTRA_SOURCES="$(nvram get malad_xtra)"
 for name in $(echo "$XTRA_SOURCES" | awk 'BEGIN{FS=">"}{print $1,$NF;}'); do
@@ -214,6 +215,10 @@ for s in $DFLT_SOURCES; do
                 SOURCES="$SOURCES $s"
         fi
 done
+
+# SSL CA
+CA_CRT="$(nvram get malad_cacrt)"
+CA_KEY="$(nvram get malad_cakey)"
 
 #########################################################
 # End of default values					#
@@ -329,6 +334,9 @@ readdnsmasq() {
 
 startserver() {
 	if [ "$PIXEL_IP" != "0" ]; then
+		[ "$CA_CRT" = "" ] || echo "$CA_CRT" > $prefix/ca.crt
+		[ "$CA_KEY" = "" ] || echo "$CA_KEY" > $prefix/ca.key
+
 		if ! ifconfig | grep -q $BRIDGE:$vif; then
 			elog "Setting up $rediripandmask on $BRIDGE:$vif"
 			ifconfig $BRIDGE:$vif $rediripandmask up
@@ -447,6 +455,8 @@ cleanfiles() {
 	elog "Cleaning files"
 	rm -f $prefix/lastmod-* &> /dev/null
 	rm -f $prefix/source-* &> /dev/null
+	rm -f $prefix/ca.crt &> /dev/null
+	rm -f $prefix/ca.key &> /dev/null
 	rm -f $tmpstatus &> /dev/null
 	rm -f $blocklist  &> /dev/null
 	elog "The following files remain for manual removal:"
