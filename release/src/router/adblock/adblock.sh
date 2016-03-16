@@ -209,8 +209,8 @@ DFLT_SOURCES="$DFLT_SOURCES http://www.malwaredomainlist.com/hostslist/hosts.txt
 DFLT_SOURCES="$DFLT_SOURCES http://adblock.gjtech.net/?format=unix-hosts"
 DFLT_SOURCES="$DFLT_SOURCES http://hosts-file.net/ad_servers.txt"
 for s in $DFLT_SOURCES; do
-        md5abbrev="$(echo $s | md5sum | cut -c 1-8)"
-        if ! echo $(nvram get malad_dflt) | grep -q $md5abbrev; then
+        md5abbrev="$(echo -n $s | md5sum | cut -c 1-8)"
+        if ! echo $(nvram get malad_dflt) | grep -qi $md5abbrev; then
                 SOURCES="$SOURCES $s"
         fi
 done
@@ -522,8 +522,8 @@ grabsource() {
 	local path=$(echo $1 | awk -F"/" '{print substr($0, index($0,$4))}')
 	local lastmod=$(echo -e "HEAD /$path HTTP/1.1\r\nHost: $host\r\n\r\n" | nc -w30 $host 80 | tr -d '\r' | grep "Last-Modified")
 
-	local lmfile="$listprefix/lastmod-$(echo $1 | md5sum | cut -c 1-8)"
-	local sourcefile="$listprefix/source-$(echo $1 | md5sum | cut -c 1-8)"
+	local lmfile="$listprefix/lastmod-$(echo -n $1 | md5sum | cut -c 1-8)"
+	local sourcefile="$listprefix/source-$(echo -n $1 | md5sum | cut -c 1-8)"
 	local sourcesize=$(ls -l "$sourcefile" 2>/dev/null | awk '{ print int(($5/1024/1024) + 0.5) }')
 	local freedisk=$(df "$prefix" | awk '!/File/{print int($4/1024)}')
 

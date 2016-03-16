@@ -1,7 +1,8 @@
 <title>Malware/Adware Blocking</title>
 <content>
+<script type="text/javascript" src="js/md5.js"></script>
 <script type="text/javascript">
-//	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_mode,malad_cron,malad_dflt,malad_xtra,malad_wtl,malad_bkl"); %>
+//	<% nvram("at_update,tomatoanon_answer,malad_enable,malad_mode,malad_cron,malad_dflt,malad_xtra,malad_wtl,malad_bkl,malad_cacrt,malad_cakey"); %>
     var pxld = {"uts": "uptime in seconds",
                 "req": "number of connection requests",
                 "avg": "average request size in bytes",
@@ -48,13 +49,13 @@
 
     /* Default Sources */
     var dflt_sources = [
-        ['fb1d1107', 'http://adaway.org/hosts.txt'],
-        ['da9bd190', 'http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext'],
-        ['c2934517', 'http://winhelp2002.mvps.org/hosts.txt'],
-        ['f4af2545', 'http://someonewhocares.org/hosts/hosts'],
-        ['3b41114e', 'http://www.malwaredomainlist.com/hostslist/hosts.txt'],
-        ['353675ed', 'http://adblock.gjtech.net/?format=unix-hosts'],
-        ['88096bb7', 'http://hosts-file.net/ad_servers.txt']
+        'http://adaway.org/hosts.txt',
+        'http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext',
+        'http://winhelp2002.mvps.org/hosts.txt',
+        'http://someonewhocares.org/hosts/hosts',
+        'http://www.malwaredomainlist.com/hostslist/hosts.txt',
+        'http://adblock.gjtech.net/?format=unix-hosts',
+        'http://hosts-file.net/ad_servers.txt'
     ];
     var dflt = new TomatoGrid();
     dflt.setup = function() {
@@ -66,9 +67,10 @@
         this.canDelete = false;
         this.headerSet(['On', 'URL']);
         for (i = 0; i < dflt_sources.length; ++i) {
-            var item = dflt_sources[i];
-            is_checked = dsbld.indexOf(item[0]) == -1 ? 1 : 0;
-            this.insertData(-1, [is_checked, item[1]]);
+            var src = dflt_sources[i];
+            var md5 = hex_md5(src).substr(0, 8);
+            is_checked = dsbld.indexOf(md5) == -1 ? 1 : 0;
+            this.insertData(-1, [is_checked, src]);
         }
         this.sort(1);
     }
@@ -203,24 +205,24 @@
         fom = E('_fom');
 
         fom.malad_enable.value = E('_f_malad_enable').checked ? 1 : 0;
-        if (fom.malad_enable.value == 0) {
+        if (fom.malad_enable.value == 0 && nvram.malad_enable == '1') {
             fom._service.value = 'adblock-stop';
         }
+        if (fom.malad_enable.value == 1 && nvram.malad_enable != '1') {
+            fom._service.value = 'adblock-start';
+        }
         fom.malad_mode.value = E('_f_malad_mode').value;
-        fom.malad_cron.value = "55 4 " + E('_f_malad_cron').value + " * *";
+        fom.malad_cron.value = [Math.floor((Math.random() * 59) + 1),
+                                Math.floor((Math.random() * 5) + 1),
+                                E('_f_malad_cron').value, "*",  "*"].join(' ');
 
         var dflts = dflt.getAllData();
         r = [];
         for (i = 0; i < dflts.length; ++i) {
             var item = dflts[i];
             if (item[0] == 0) {
-                // Lookup the abbreviated md5 and save that instead of full URL
-                for (j=0; j < dflt_sources.length; ++j) {
-                    if (dflt_sources[j][1] == item[1]) {
-                        r.push(dflt_sources[j][0]);
-                        break;
-                    }
-                }
+                // Only save default sources that are disabled, via abbreviated md5
+                r.push(hex_md5(item[1]).substr(0, 8));
             }
         }
         fom.malad_dflt.value = r.join(' ');
@@ -245,6 +247,13 @@
             r.push(bkls[i]);
         }
         fom.malad_bkl.value = r.join(' ');
+
+        fom.malad_cacrt = E('_f_malad_cacrt').value;
+        fom.malad_cakey = E('_f_malad_cakey').value;
+
+        if (fom._service.value != "" && fom.malad_enable.value == 1) {
+            fom._service.value = 'adblock';
+        }
 
         form.submit('_fom', 1);
     }
@@ -314,7 +323,7 @@
 
 <form id="_fom" method="post" action="tomato.cgi">
 <input type="hidden" name="_nextpage" value="/#advanced-maladware.asp">
-<input type="hidden" name="_service" value="adblock-restart">
+<input type="hidden" name="_service" value="">
 
 <div id="advanced-maladware">
     <script type="text/javascript">
