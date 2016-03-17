@@ -15,5 +15,6 @@
 *.depend
 *.cmd
 *.pc
+tomato_version*
 stamp-h*
 

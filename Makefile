@@ -1,7 +1,7 @@
 VERSION=0.1
 
 rtn16:
-	make -C release/src-rt r2z V1=$(VERSION) V2=RTN16
+	make -C release/src-rt r2s V1=$(VERSION) V2=RTN16
 
 rtn66:
 	make -C release/src-rt r64z V1=$(VERSION) V2=RTN66
