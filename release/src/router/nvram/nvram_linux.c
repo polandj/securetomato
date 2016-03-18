@@ -109,14 +109,16 @@ static int _nvram_set(const char *name, const char *value)
 		if ((ret = nvram_init(NULL)) != 0) return ret;
 	}
 
-	/* Unset if value is NULL */
-	if (value) count += strlen(value) + 1;
+	/* Unset if value is NULL or empty string */
+	if (value && strlen(value) > 0) {
+		count += strlen(value) + 1; // Account for trailing null
+	}
 
 	if (count > sizeof(tmp)) {
 		if ((buf = malloc(count)) == NULL) return -ENOMEM;
 	}
 
-	if (value) {
+	if (value && strlen(value) > 0) {
 		sprintf(buf, "%s=%s", name, value);
 	}
 	else {
