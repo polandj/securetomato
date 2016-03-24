@@ -254,6 +254,7 @@ endif
 obj-y += wanuptime
 obj-y += adblock
 obj-y += pixelserv-tls
+obj-y += libcurl
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
@@ -774,7 +775,7 @@ endif
 
 openssl/stamp-h1:
 	cd openssl && \
-	./Configure linux-mipsel --openssldir=/etc --cross-compile-prefix=' ' \
+	./Configure linux-mipsel --prefix=/usr --libdir=/ --openssldir=/etc --cross-compile-prefix=' ' \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
 	shared $(OPENSSL_CIPHERS) no-ssl2 no-ssl3 \
 	no-sha0 no-smime no-camellia no-krb5 no-rmd160 no-ripemd \
@@ -787,10 +788,13 @@ openssl/stamp-h1:
 	@touch openssl/stamp-h1
 
 openssl: openssl/stamp-h1
+	@$(MAKE) -C openssl all
+	@$(MAKE) -C openssl INSTALL_PREFIX=$(TOP)/openssl/staged install
 
 openssl-clean:
 	-@$(MAKE) -C openssl clean
-	@rm -f openssl/stamp-h1
+	@rm -f openssl/stamp-h1 openssl/*.pc 
+	@rm -rf openssl/staged
 
 openssl-install: openssl
 	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
@@ -2150,18 +2154,18 @@ nano-install: nano
 
 libcurl/stamp-h1: zlib openssl
 	cd libcurl && CC=$(CC) STRIP='mipsel-uclibc-strip' \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib" \
-		LDFLAGS="-L$(TOP)/zlib -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=$(TOP)/libcurl/staged --disable-thread --enable-shared --enable-static \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib -I$(TOP)/openssl" \
+		LIBS="-lssl -lcrypto" \
+		LDFLAGS="-L$(TOP)/zlib -L$(TOP)/openssl -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		$(CONFIGURE) --prefix=$(TOP)/libcurl/staged --disable-thread --enable-dynamic --enable-static \
 		--enable-ares --enable-cookies --enable-crypto-auth --enable-nonblocking \
-		--enable-file --enable-ftp --enable-http --enable-ipv6 --enable-tftp \
+		--disable-file --disable-ftp --enable-http --enable-ipv6 --disable-tftp --disable-rtsp \
 		--disable-nls --disable-ares --disable-dict --disable-debug --disable-gopher \
-		--disable-ldap --disable-manual --disable-telnet --disable-verbose \
-		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl" \
-		--without-gnutls --without-krb4 --without-libidn \
-		--with-linux-headers=$(LINUXDIR)/include \
-		OPENSSL_CFLAGS="-I$(TOP)/openssl/include" \
-		OPENSSL_LIBS="-L$(TOP)/openssl -lcrypto -lssl"
+		--disable-ldap --disable-manual --disable-telnet --disable-verbose --disable-pop3 --disable-imap \
+		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl" --with-zlib="$(TOP)/zlib" \
+		--without-axtls --without-gnutls --without-krb4 --without-libidn \
+		--with-ca-bundle=/usr/local/libcurl/cacert.pem \
+		--with-linux-headers=$(LINUXDIR)/include 
 		touch libcurl/stamp-h1
 
 libcurl: libcurl/stamp-h1
@@ -2183,6 +2187,8 @@ libcurl-install: libcurl
 	cd $(INSTALLDIR)/libcurl/usr/lib/ && \
 		ln -sf libcurl.so.4.3.0 libcurl.so.4 && \
 		ln -sf libcurl.so.4.3.0 libcurl.so
+	install -d $(INSTALLDIR)/libcurl/usr/local/libcurl
+	install -D libcurl/cacert.pem $(INSTALLDIR)/libcurl/usr/local/libcurl/cacert.pem
 
 libevent/stamp-h1:
 	cd libevent && CC=$(CC) \

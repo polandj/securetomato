@@ -392,8 +392,8 @@ function v_url(e, quiet)
 {
     if ((e = E(e)) == null) return 0;
     var v = e.value;
-    if ((!v.match(/^ *(ftp|http):\/\/[^ "]+ *$/))) {
-        ferror.set(e, 'Invalid url.  Valid syntax: (ftp|http)://...', quiet)
+    if ((!v.match(/^ *(http|https):\/\/[^ "]+ *$/))) {
+        ferror.set(e, 'Invalid url.  Valid syntax: (http|https)://...', quiet)
             return false;
     }
     ferror.clear(e);
