@@ -29,7 +29,7 @@ static void help(void)
 		"NVRAM Utility\n"
 		"Copyright (C) 2006-2009 Jonathan Zarate\n\n"	
 		"Usage: nvram set <key=value> | get <key> | unset <key> | default_get  <key> [only work on K26AC routers]\n"
-		"ren <key> <key> | commit | erase | show [--nosort|--nostat] |\n"
+		"ren <key> <key> | commit | erase | clean [--noshow|--nostat] | show [--nosort|--nostat] |\n"
 		"find <text> | defaults <--yes|--initcheck> | backup <filename> |\n"
 		"restore <filename> [--test] [--force] [--forceall] [--nocommit] |\n"
 		"export <--quote|--c|--set|--tab> [--nodefaults] |\n"
@@ -119,9 +119,8 @@ static int save2f_main(int argc, char **argv)
 	return (nvram_file2nvram(name, argv[1]));
 }
 static int default_get_main(int argc, char **argv){
-	char *p;
-
 #ifdef CONFIG_BCMWL6
+	char *p;
 	if ((p = nvram_default_get(argv[1])) != NULL) {
 		puts(p);
 		return 0;
@@ -140,9 +139,9 @@ static int show_main(int argc, char **argv)
 	int sort = 1;
 
 	for (n = 1; n < argc; ++n) {
-        if (strcmp(argv[n], "--nostat") == 0) stat = 0;
-			else if (strcmp(argv[n], "--nosort") == 0) sort = 0;
-				else help();
+        	if (strcmp(argv[n], "--nostat") == 0) stat = 0;
+		else if (strcmp(argv[n], "--nosort") == 0) sort = 0;
+		else help();
 	}
 
 	if (sort) {
@@ -176,6 +175,44 @@ static int find_main(int argc, char **argv)
 	snprintf(cmd, sizeof(cmd), "nvram show --nostat --nosort | sort | grep \"%s\"", argv[1]);
 	r = system(cmd);
 	return (r == -1) ? 1 : WEXITSTATUS(r);
+}
+
+static int clean_main(int argc, char **argv) {
+	int count, bytes, n;
+	char *p, *q;
+	char buffer[NVRAM_SPACE];
+	int show = 1;
+	int stat = 1;
+
+	for (n = 1; n < argc; ++n) {
+        	if (strcmp(argv[n], "--nostat") == 0) stat = 0;
+		else if (strcmp(argv[n], "--noshow") == 0) show = 0;
+		else help();
+	}
+
+	getall(buffer);
+	count = bytes = 0;
+	for (p = buffer; *p; p += strlen(p) + 1) {
+		q = p;
+		while (*q && *q != '=') {
+			++q;
+		}
+		if ((q - p) + 1 == strlen(p)) {
+			*q = '\0'; // "Trim" the trailing "="
+			if (show) {
+				printf("%s\n", p);
+			}
+			nvram_unset(p);
+			*q = '='; // Put the trainling "=" back
+			count++;
+			bytes+=(q-p)+1;
+			
+		}
+	}
+	if (stat) {
+		printf("---\n%d entries cleaned, %d bytes freed\n", count, bytes);
+	}
+	return 0;
 }
 
 static const char *nv_default_value(const defaults_t *t)
@@ -989,6 +1026,7 @@ static const applets_t applets[] = {
 	{ "getfile",		4,	n2f_main		},
 	{ "setfile2nvram",	3,	save2f_main		},
 	{ "default_get",	3,	default_get_main	},
+	{ "clean",              2,	clean_main		},
 //	{ "test",		2,	test_main		},
 	{ NULL, 		0,	NULL			}
 };
