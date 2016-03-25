@@ -2499,6 +2499,7 @@ function navi()
 			'Malware/Adware':       'advanced-maladware.asp',
 			'Miscellaneous':        'advanced-misc.asp',
 			'Routing':              'advanced-routing.asp',
+			'MultiWAN Routing':     'advanced-pbr.asp',
 			/* TOR-BEGIN */
 			'Tor Project':          'advanced-tor.asp',
 			/* TOR-END */

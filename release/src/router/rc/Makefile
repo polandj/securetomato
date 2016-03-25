@@ -23,6 +23,9 @@ ifeq ($(CONFIG_BCMWL6),y)
 OBJS += blink_5g.o
 endif
 
+# dualwan / multiwan
+OBJS += mwan.o pbr.o
+
 ifeq ($(TCONFIG_USB),y)
 OBJS += usb.o
 endif
@@ -112,6 +115,9 @@ install: all
 	@cd $(INSTALLDIR)/sbin && ln -sf rc reboot
 	@cd $(INSTALLDIR)/sbin && ln -sf rc halt
 	@cd $(INSTALLDIR)/sbin && ln -sf rc redial
+
+	@cd $(INSTALLDIR)/sbin && ln -sf rc mwanroute
+
 	@cd $(INSTALLDIR)/sbin && ln -sf rc gpio
 	@cd $(INSTALLDIR)/sbin && ln -sf rc sched
 

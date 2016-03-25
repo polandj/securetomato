@@ -2,10 +2,10 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=960">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta http-equiv="content-type" content="text/html;charset=utf-8">
 		<meta name="robots" content="noindex,nofollow">
-		<title>[<% ident(); %>]: Basic</title>
+		<title>[<% ident(); %>]: Home</title>
 
 		<!-- Stylesheets -->
 		<link href="css/reset.css" rel="stylesheet">
@@ -29,28 +29,28 @@
 
 			// Fix for system data display
 			var refTimer, wl_ifaces = {}, ajaxLoadingState = false, gui_version = "<% version(0); %>";
-			$(document).ready(function() {
+			$( document ).ready( function() {
 
 				// Attempt match
-				match_regex = gui_version.match(/^1\.28\.0000.*?([0-9]{1,3}\.[0-9]{1}\-[0-9]{3}).* ([a-z0-9\-]+)$/i);
-				
+				match_regex = gui_version.match( /^1\.28\.0000.*?([0-9]{1,3}\.[0-9]{1}\-[0-9]{3}).* ([a-z0-9\-]+)$/i );
+
 				// Check matches
-				if ( match_regex == null || match_regex[1] == null ) { 
+				if ( match_regex == null || match_regex[ 1 ] == null ) {
 
-					gui_version = 'More Info' 
+					gui_version = 'More Info'
 
-				} else { 
+				} else {
 
-					gui_version = 'v' + match_regex[1] + ' ' + match_regex[2]; 
+					gui_version = 'v' + match_regex[ 1 ] + ' ' + match_regex[ 2 ];
 
 				}
 
 				// Write version & initiate GUI functions & binds
-				$('#gui-version').html('<i class="icon-info-alt"></i> <span class="nav-collapse-hide">' + gui_version + '</span>');
+				$( '#gui-version' ).html( '<i class="icon-info-alt"></i> <span class="nav-collapse-hide">' + gui_version + '</span>' );
 				AdvancedTomato();
 
-			});
-			
+			} );
+
 		</script>
 	</head>
 	<body>

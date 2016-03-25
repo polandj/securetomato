@@ -153,7 +153,6 @@ dnsmasq_logqueries=""
 # !**** CAUTION ****!
 dnsmasq_custom="
 local-ttl=600
-cache-size=10000
 "
 
 # additional options for wget
