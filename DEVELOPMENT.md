@@ -20,7 +20,7 @@ Any Linux environment should work.  Ubuntu is known to work well.  Install the f
  
 Get the source code:
 ```
-git clone git@github.com:polandj/securetomato.git
+git clone https://github.com/polandj/securetomato.git
 ```
 
 Setup the MIPS tools:
