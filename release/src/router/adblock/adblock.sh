@@ -179,7 +179,8 @@ FWBRIDGE="br+ lo"
 redirip=""
 
 # additional options for pixelserv
-PIXEL_OPTS="-l -z $prefix"
+PIXEL_CERTS="$prefix/certs"
+PIXEL_OPTS="-l -z $PIXEL_CERTS"
 
 # 1: keep blocklist in RAM (e.g. for small JFFS)
 RAMLIST=0
@@ -219,6 +220,8 @@ done
 CA_CRT="$(nvram get malad_cacrt)"
 CA_KEY="$(nvram get malad_cakey)"
 
+STATUS_FILE="$prefix/STATUS"
+
 #########################################################
 # End of default values					#
 #########################################################
@@ -231,6 +234,7 @@ elog() {
  pad=${pad:0:$len}
 
  local p1=${1:-"-"}
+ echo "$1" > $STATUS_FILE
 
  [ "$firemode" = "1" ] && {
    [ "$p1" = "-" ] &&  {
@@ -333,8 +337,9 @@ readdnsmasq() {
 
 startserver() {
 	if [ "$PIXEL_IP" != "0" ]; then
-		[ "$CA_CRT" = "" ] || echo "$CA_CRT" > $prefix/ca.crt
-		[ "$CA_KEY" = "" ] || echo "$CA_KEY" > $prefix/ca.key
+		[ -d $PIXEL_CERTS ] || mkdir $PIXEL_CERTS
+		[ "$CA_CRT" = "" ] || echo "$CA_CRT" > $PIXEL_CERTS/ca.crt
+		[ "$CA_KEY" = "" ] || echo "$CA_KEY" > $PIXEL_CERTS/ca.key
 
 		if ! ifconfig | grep -q $BRIDGE:$vif; then
 			elog "Setting up $rediripandmask on $BRIDGE:$vif"

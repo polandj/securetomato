@@ -205,13 +205,12 @@
         fom = E('_fom');
 
         fom.malad_enable.value = E('_f_malad_enable').checked ? 1 : 0;
-        if (fom.malad_enable.value == 0 && nvram.malad_enable == '1') {
+        if (fom.malad_enable.value == 0) {
             fom._service.value = 'adblock-stop';
         }
-        if (fom.malad_enable.value == 1 && nvram.malad_enable !== '1') {
+        if (fom.malad_enable.value == 1) {
             fom._service.value = 'adblock-start';
         }
-        console.log(nvram.malad_enable);
         fom.malad_mode.value = E('_f_malad_mode').value;
         fom.malad_cron.value = [Math.floor((Math.random() * 59) + 1),
                                 Math.floor((Math.random() * 5) + 1),
@@ -251,10 +250,6 @@
 
         fom.malad_cacrt.value = E('_f_malad_cacrt').value;
         fom.malad_cakey.value = E('_f_malad_cakey').value;
-
-        if (fom._service.value != "" && fom.malad_enable.value == 1) {
-            fom._service.value = 'adblock-restart';
-        }
 
         form.submit('_fom', 1);
     }

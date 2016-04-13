@@ -96,7 +96,7 @@ No part of this file may be used without permission.
 					numBridges++;
 				}
 			}
-			lg.canDelete = false;
+			//lg.canDelete = false;
 			lg.sort(0);
 			elem.removeClass(lg.header.cells[lg.sortColumn], 'sortasc', 'sortdes');
 			lg.showNewEditor();

@@ -100,7 +100,7 @@ LAN Access admin module by Augusto Bott
 
 			wlg.populate();
 
-			wlg.canDelete = false;
+			//wlg.canDelete = false;
 			wlg.showNewEditor();
 			wlg.resetNewEditor();
 			if (wlg.getAllData().length >= max_no_vifs) {

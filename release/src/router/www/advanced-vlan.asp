@@ -406,7 +406,7 @@ No part of this file may be used without permission.
 				this.headerSet( [ 'VLAN', 'VID', 'Port 1', 'Tagged', 'Port 2', 'Tagged', 'Port 3', 'Tagged', 'Port 4', 'Tagged', 'WAN Port', 'Tagged', 'Default', 'Bridge' ] );
 
 				vlg.populate();
-				vlg.canDelete = false;
+				//vlg.canDelete = false;
 				vlg.sort( 0 );
 				vlg.showNewEditor();
 				vlg.resetNewEditor();
