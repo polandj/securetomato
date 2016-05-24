@@ -1,6 +1,4 @@
 /*
-   CREATE TABLE notifications (id INTEGER PRIMARY KEY, tstamp_first TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, tstamp_last TIMESTAMP CURRENT_TIMESTAMP NOT NULL, tstamp_email_last_sent TIMESTAMP, plug UNIQUE NOT NULL, content NOT NULL, status TEXT CHECK (status IN ('N', 'R', 'I')) NOT NULL DEFAULT 'N');
-   
    sqlite> select * from notifications;
    1|2016-04-28 18:14:57|2016-04-29 02:44:22|2016-04-28 18:14:59|Web Username|The web is using the default username, please change it|N
    2|2016-04-28 18:14:59|2016-04-29 02:44:22|2016-04-28 18:15:00|Web Root|Root login is enabled, please disable it|N
@@ -9,10 +7,6 @@
    5|2016-04-28 18:15:02|2016-04-29 02:44:22|2016-04-28 19:29:25|Web Insecure Remote|Remote management is enabled via HTTP.  Change this!|N
    6|2016-04-28 19:26:01|2016-04-29 02:38:13|2016-04-28 19:26:03|New DHCP lease to unknown device: f8:cf:c5:1e:22:63|New DHCP lease, 172.28.28.243, to unknown host with MAC f8:cf:c5:1e:22:63[android-c58abbd80fb72664]
    |N
-
-   '<[0-9]+>([a-zA-Z]+[ ]+[0-9]+[ ]+[0-9:]+)[ ]+([^[]+)[][0-9]+[: ]+(.+)
-
-   DHCPACK.+ ([0-9.]+) ([0-9a-fA-F:]+) ?(.*)
 
    CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY, tstamp_first TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, tstamp_last TIMESTAMP CURRENT_TIMESTAMP NOT NULL, tstamp_email_last_sent TIMESTAMP, plug UNIQUE NOT NULL, content NOT NULL, status TEXT CHECK (status IN ('N', 'R', 'I')) NOT NULL DEFAULT 'N')
 
@@ -28,10 +22,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <regex.h>
+#include <bcmnvram.h>
 
 #define SYSLOG_REGEX "<[0-9]+>([a-zA-Z]+[ ]+[0-9]+[ ]+[0-9:]+)[ ]+([^[]+)[][0-9]+[: ]+(.+)"
+#define DNSMASQ_DHCP_REGEX "DHCPACK.+ ([0-9.]+) ([0-9a-fA-F:]+) ?(.*)"
 
 regex_t syslog_re;
+regex_t dnsmasq_dhcp_re;
 
 void timer_cb(evutil_socket_t fd, short what, void *arg)
 {
@@ -39,12 +36,30 @@ void timer_cb(evutil_socket_t fd, short what, void *arg)
 	printf("TIMER\n");
 }
 
+void
+dnsmasq_dhcp_check(char *datetime, char *msg) {
+	regmatch_t m[4];
+
+	const char *statics=nvram_get("dhcpd_static") ?: "";
+	printf("%s\n", statics);
+	if (!regexec(&dnsmasq_dhcp_re, msg, 4, m, 0)) {
+		char ip[20], mac[20], hostname[1000];
+		snprintf(ip, sizeof(ip), "%.*s", m[1].rm_eo-m[1].rm_so, &msg[m[1].rm_so]);
+		snprintf(mac, sizeof(mac), "%.*s", m[2].rm_eo-m[2].rm_so, &msg[m[2].rm_so]);
+		snprintf(hostname, sizeof(hostname), "%.*s", m[3].rm_eo-m[3].rm_so, &msg[m[3].rm_so]);
+		printf("New Lease: %s to %s (%s)\n", ip, mac, hostname);
+		if (strcasestr(mac, statics)) {
+			printf("NOT FOUND IN statics (%s)\n", statics);
+		}
+	}
+}
+
 void recv_cb(evutil_socket_t fd, short what, void *arg)
 {
 	// Receive syslog
 	unsigned int unFromAddrLen;
 	int nByte = 0;
-	char aReqBuffer[512];
+	char aReqBuffer[1024];
 	struct sockaddr_in stFromAddr;
 
 	unFromAddrLen = sizeof(stFromAddr);
@@ -58,9 +73,14 @@ void recv_cb(evutil_socket_t fd, short what, void *arg)
 	aReqBuffer[nByte] = '\0';
 	regmatch_t m[4];
 	if (!regexec(&syslog_re, aReqBuffer, 4, m, 0)) {
-		printf("Matched -> %.*s - %.*s - %.*s\n", m[1].rm_eo-m[1].rm_so, &aReqBuffer[m[1].rm_so],
-				                          m[2].rm_eo-m[2].rm_so, &aReqBuffer[m[2].rm_so],
-							  m[3].rm_eo-m[3].rm_so, &aReqBuffer[m[3].rm_so]);
+		char datetime[20], daemon[20], msg[1000];
+		snprintf(datetime, sizeof(datetime), "%.*s", m[1].rm_eo-m[1].rm_so, &aReqBuffer[m[1].rm_so]);
+		snprintf(daemon, sizeof(daemon), "%.*s", m[2].rm_eo-m[2].rm_so, &aReqBuffer[m[2].rm_so]);
+		snprintf(msg, sizeof(msg), "%.*s", m[3].rm_eo-m[3].rm_so, &aReqBuffer[m[3].rm_so]);
+		printf("Matched -> %s - %s - %s\n", datetime, daemon, msg);
+		if (!strcasecmp(daemon, "dnsmasq-dhcp")) {
+			dnsmasq_dhcp_check(datetime, msg);
+		}
 	} else {
 		printf("NO MATCH: '%.*s'\n",nByte, aReqBuffer);
 	}
@@ -81,6 +101,10 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
+	if (regcomp(&dnsmasq_dhcp_re, DNSMASQ_DHCP_REGEX, REG_EXTENDED|REG_NEWLINE)) {
+		printf("ERROR - unable to compile dnsmasq-dhcp regex\n");
+		exit(-1);
+	}
 	base = event_init();
 
 	if ((udpsock_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
