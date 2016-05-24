@@ -28,7 +28,7 @@ if [ "$ANON_ANSWER" == "1" ]; then
     if [ "$ANON_ENABLED" == "1" ]; then
 
 ############################
-        MOD=AdvancedTomato
+        MOD=SecureTomato
 ############################
 
         #Detect Version and Buildtype
@@ -84,7 +84,7 @@ if [ "$ANON_ANSWER" == "1" ]; then
 
         else #just update anon database
             #Collect datas
-            MOD=AdvancedTomato
+            MOD=SecureTomato
             UPTIME=`uptime | cut -d "," -f1 | cut -d " " -f4,5`
             WANMAC=`nvram get wan_hwaddr`
             LANMAC=`nvram get lan_hwaddr`

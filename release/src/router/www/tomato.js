@@ -393,8 +393,20 @@ function v_url(e, quiet)
     if ((e = E(e)) == null) return 0;
     var v = e.value;
     if ((!v.match(/^ *(http|https):\/\/[^ "]+ *$/))) {
-        ferror.set(e, 'Invalid url.  Valid syntax: (http|https)://...', quiet)
-            return false;
+        ferror.set(e, 'Invalid url.  Valid syntax: (http|https)://...', quiet);
+        return false;
+    }
+    ferror.clear(e);
+    return true;
+}
+
+function v_email(e, quiet)
+{
+    if ((e = E(e)) == null) return 0;
+    var v = e.value;
+    if ((!v.match(/\S+@\S+\.\S+/))) {
+        ferror.set(e, 'Invalid email.', quiet);
+        return false;
     }
     ferror.clear(e);
     return true;
@@ -2589,6 +2601,7 @@ function navi()
 			/* NFS-BEGIN */
 			'NFS Server':           'admin-nfs.asp',
 			/* NFS-END */
+            'Notification':         'admin-notification.asp',
 			'Logging':              'admin-log.asp',
 			'Scheduler':            'admin-sched.asp',
 			'Scripts':              'admin-scripts.asp',

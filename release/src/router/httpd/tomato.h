@@ -88,6 +88,7 @@ extern void wo_resolve(char *url);
 #ifdef TCONFIG_IPV6
 extern void asp_calc6rdlocalprefix(int argc, char **argv);
 #endif
+extern void wo_smtp(char *url);
 
 // usb.c
 #ifdef TCONFIG_USB

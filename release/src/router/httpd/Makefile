@@ -23,6 +23,8 @@ LIBS += -L$(TOP)/mssl -lmssl
 
 ifeq ($(FULL_OPENSSL),y)
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
+LIBS += -L$(TOP)/libcurl/staged/lib -lcurl -L$(TOP)/zlib -lz
+CFLAGS += -I$(TOP)/libcurl/staged/include
 endif
 
 ifeq ($(TCONFIG_PPTPD),y)

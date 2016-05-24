@@ -1311,6 +1311,10 @@ void start_syslog(void)
 		}
 	}
 
+	/* Tee to the tomon monitoring process */
+	argv[argc++] = "-R";
+	argv[argc++] = "127.0.0.1";
+
 	if (nvram_match("log_file", "1")) {
 		argv[argc++] = "-L";
 

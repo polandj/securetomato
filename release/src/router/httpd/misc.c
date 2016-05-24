@@ -27,6 +27,8 @@
 #include <ifaddrs.h>
 #endif
 
+#include <curl/curl.h>
+
 #include <wlioctl.h>
 #include <wlutils.h>
 
@@ -926,3 +928,102 @@ void wo_resolve(char *url)
 	}
 	web_puts("];\n");
 }
+
+struct smtp_payload {
+        char buf[2048];
+        size_t offset;
+};
+
+static size_t smtp_payload_send(void *ptr, size_t size, size_t nmemb, void *userp)
+{
+        struct smtp_payload *payload = (struct smtp_payload *)userp;
+        const char *data;
+
+        if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
+                return 0;
+        }
+        data = &payload->buf[payload->offset];
+        if (data) {
+                size_t len = strlen(data) < (size*nmemb) ? strlen(data) : (size * nmemb);
+                memcpy(ptr, data, len);
+                payload->offset += len;
+                return len;
+        }
+        return 0;
+}
+
+void wo_smtp(char *url)
+{
+        const char *to, *from, *subject, *body;
+        const char *srvr, *port, *usr, *pwd, *tssls;
+        char urlbuf[512], errBuf[CURL_ERROR_SIZE];
+        struct smtp_payload payload;
+        CURL *curl;
+        CURLcode res = CURLE_OK;
+        struct curl_slist *recipients = NULL;
+
+        to = webcgi_safeget("to", nvram_get("smtp_to"));
+        from = webcgi_safeget("from", nvram_get("smtp_from"));
+        srvr = webcgi_safeget("srvr", nvram_get("smtp_srvr"));
+        port = webcgi_safeget("port", nvram_get("smtp_port"));
+        usr = webcgi_safeget("usr", nvram_get("smtp_usr"));
+        pwd = webcgi_safeget("pwd", nvram_get("smtp_pwd"));
+        tssls = webcgi_safeget("tssls", nvram_get("smtp_tssls"));
+        subject = webcgi_safeget("subject", "A Message from SecureTomato");
+        body = webcgi_safeget("body", "");
+
+        curl = curl_easy_init();
+        if (!curl) {
+                web_puts("@error: Unable to initialize curl");
+                return;
+        }
+        if (usr) {
+                curl_easy_setopt(curl, CURLOPT_USERNAME, usr);
+        }
+        if (pwd) {
+                curl_easy_setopt(curl, CURLOPT_PASSWORD, pwd);
+        }
+        if (srvr && port) {
+                snprintf(urlbuf, sizeof(urlbuf), "smtp%s://%s:%s", tssls ? "s": "", srvr, port);
+                curl_easy_setopt(curl, CURLOPT_URL, urlbuf);
+        } else {
+                web_puts("@error: No server and/or port specified");
+                goto CURL_CLEANUP;
+        }
+        if (tssls) {
+                curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
+        }
+        if (from) {
+                curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
+        }
+        if (to) {
+                recipients = curl_slist_append(recipients, to);
+                curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+        } else {
+                web_puts("@error: No recipients specified");
+                goto CURL_CLEANUP;
+        }
+	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errBuf);
+
+        syslog(LOG_WARNING, "SMTP. TO: %s, FROM: %s, Subject: %s, SRVR: %s", to, from, subject, urlbuf);
+
+        snprintf(payload.buf, sizeof(payload.buf), "To: %s\r\nFrom: %s\r\nSubject: %s\r\n\r\n%s", to, from, subject, body);
+        payload.offset = 0;
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, smtp_payload_send);
+        curl_easy_setopt(curl, CURLOPT_READDATA, &payload);
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+
+        res = curl_easy_perform(curl);
+        if(res != CURLE_OK) {
+                syslog(LOG_WARNING, "SMTP - %s[%d]", curl_easy_strerror(res), res);
+                web_printf("@error: %s[%d-%s]", errBuf, res, curl_easy_strerror(res));
+        } else {
+                web_puts("@ok: Message Sent");
+        }
+
+CURL_CLEANUP:
+        curl_slist_free_all(recipients);
+        curl_easy_cleanup(curl);
+}
+
+

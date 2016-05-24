@@ -254,9 +254,13 @@ else
 endif
 
 obj-y += wanuptime
+
 obj-y += adblock
 obj-y += pixelserv-tls
+
 obj-y += libcurl
+obj-y += sqlite
+obj-y += tomon
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
@@ -737,7 +741,7 @@ busybox-config:
 	$(MAKE) -C busybox menuconfig
 
 
-httpd: shared nvram mssl
+httpd: shared nvram mssl libcurl
 	@$(SEP)
 	@$(MAKE) -C httpd
 
@@ -1356,13 +1360,13 @@ sqlite-clean:
 
 sqlite-install: sqlite
 	@$(SEP)
-ifeq ($(TCONFIG_NGINX),y)
+#ifeq ($(TCONFIG_NGINX),y)
 	install -D sqlite/.libs/libsqlite3.so.0.8.6 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
 		ln -sf libsqlite3.so.0.8.6 libsqlite3.so.0 && \
 		ln -sf libsqlite3.so.0.8.6 libsqlite3.so
-endif
+#endif
 
 FFMPEG_FILTER_CONFIG= $(foreach c, $(2), --$(1)="$(c)")
 

@@ -14,7 +14,6 @@
 #include <arpa/inet.h>
 #include <time.h>
 
-
 //	#define DEBUG_NOEXECSERVICE
 #define DEBUG_NVRAMSET(k, v)	_dprintf("nvram set %s=%s\n", k, v);
 
@@ -265,7 +264,7 @@ void common_redirect(void)
 }
 
 // ----------------------------------------------------------------------------
-
+// PATTERN	MIME_TYPE	CACHE		INPUT		OUTPUT		AUTH
 const struct mime_handler mime_handlers[] = {
 	{ "update.cgi",		mime_javascript,			0,	wi_generic,			wo_update,		1 },
 	{ "tomato.cgi",		NULL,						0,	wi_generic,		    wo_tomato,		1 },
@@ -338,6 +337,7 @@ const struct mime_handler mime_handlers[] = {
 //	{ "logout.cgi",		NULL,	   		 			0,	wi_generic,			wo_logout,		0 },
 // see httpd.c
 	{ "shutdown.cgi",	mime_html,					0,	wi_generic,			wo_shutdown,	1 },
+	{ "smtp.cgi",		NULL,					0,	wi_generic,			wo_smtp,		1 },
 #ifdef TCONFIG_OPENVPN
 	{ "vpnstatus.cgi",	mime_javascript,			0,	wi_generic,			wo_vpn_status,		1 },
 #endif
@@ -1239,12 +1239,21 @@ static const nvset_t nvset_list[] = {
 	{ "tomatoanon_answer",		V_RANGE(0, 1)			},
 	{ "tomatoanon_enable",		V_RANGE(-1, 1)			},
 	{ "tomatoanon_id",		V_LENGTH(0, 32)			},
-	{ "tomatoanon_notify",		V_01					},
+	{ "tomatoanon_notify",		V_01				},
 		
 // AdvancedTomato
 	{ "at_update",      V_LENGTH(0,32)    },
 	{ "at_navi",        V_LENGTH(0,32)    },
 	{ "web_nav",        V_TEXT(0, 4096)   }, 
+
+// admin-notification
+	{ "smtp_to",	    		V_LENGTH(0, 64)			},
+	{ "smtp_from",			V_LENGTH(0, 64)			},
+	{ "smtp_srvr",			V_LENGTH(0, 64)			},
+	{ "smtp_port",			V_PORT				},
+	{ "smtp_usr",			V_LENGTH(0, 32)			},
+	{ "smtp_pwd",			V_LENGTH(0, 32)			},
+	{ "smtp_tssls", 		V_01				},
 
 // nas-usb - !!TB
 #ifdef TCONFIG_USB
