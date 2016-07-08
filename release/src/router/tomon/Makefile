@@ -3,10 +3,12 @@ include ../common.mak
 CFLAGS = -O2 -Wall $(EXTRACFLAGS) -fPIC
 CFLAGS += -I$(TOP)/shared -I$(SRCBASE)/include -I.
 CFLAGS += -I$(TOP)/libevent/staged/usr/local/include
+CFLAGS += -I$(TOP)/sqlite
 CFLAGS += -I$(TOP)/libcurl/staged/include
 
 LIBS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared
 LIBS += -L$(TOP)/libevent/staged/usr/local/lib -levent
+LIBS += -L$(TOP)/sqlite/.libs -lsqlite3
 LIBS += -L$(TOP)/libcurl/staged/lib -lcurl -L$(TOP)/zlib -lz
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
 

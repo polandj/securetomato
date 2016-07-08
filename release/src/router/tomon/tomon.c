@@ -23,15 +23,178 @@
 #include <string.h>
 #include <regex.h>
 #include <bcmnvram.h>
+#include <sqlite3.h>
+#include <curl/curl.h>
 
 #define SYSLOG_REGEX "<[0-9]+>([a-zA-Z]+[ ]+[0-9]+[ ]+[0-9:]+)[ ]+([^[]+)[][0-9]+[: ]+(.+)"
 #define DNSMASQ_DHCP_REGEX "DHCPACK.+ ([0-9.]+) ([0-9a-fA-F:]+) ?(.*)"
 
+#define NOTIFICATIONS_CREATE_SQL "CREATE TABLE IF NOT EXISTS notifications( "\
+	"id INTEGER PRIMARY KEY, "\
+	"tstamp_first TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, "\
+	"tstamp_last TIMESTAMP CURRENT_TIMESTAMP NOT NULL, "\
+	"tstamp_email_last_sent TIMESTAMP, "\
+	"plug UNIQUE NOT NULL, "\
+	"content NOT NULL, "\
+	"status TEXT CHECK (status IN ('N', 'R', 'I')) NOT NULL DEFAULT 'N'"\
+	")"
+#define NOTIFICATIONS_INSERT_SQL "INSERT OR REPLACE INTO notifications "\
+	"(id, tstamp_first, tstamp_last, tstamp_email_last_sent, plug, content, status) "\
+	"SELECT old.id, old.tstamp_first, CURRENT_TIMESTAMP, old.tstamp_email_last_sent, "\
+	"new.plug, new.content, old.status FROM (SELECT ? AS plug, ? AS content) AS new "\
+	"LEFT JOIN (SELECT * FROM notifications WHERE plug=?) AS old ON new.plug = old.plug"
+#define NOTIFICATIONS_SELECT_SQL "SELECT strftime('%s','now') - strftime('%s', tstamp_email_last_sent) FROM notifications WHERE plug=?"
+#define NOTIFICATIONS_UPDATE_SQL "UPDATE notifications SET tstamp_email_last_sent=CURRENT_TIMESTAMP WHERE plug=?"
+
+sqlite3 *db;
+
+sqlite3_stmt *notifications_insert_stmt;
+sqlite3_stmt *notifications_select_stmt;
+sqlite3_stmt *notifications_update_stmt;
+
 regex_t syslog_re;
 regex_t dnsmasq_dhcp_re;
 
-void timer_cb(evutil_socket_t fd, short what, void *arg)
+struct smtp_payload {
+        char buf[2048];
+        size_t offset;
+};
+
+static size_t smtp_payload_send(void *ptr, size_t size, size_t nmemb, void *userp)
 {
+        struct smtp_payload *payload = (struct smtp_payload *)userp;
+        const char *data;
+
+        if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
+                return 0;
+        }
+        data = &payload->buf[payload->offset];
+        if (data) {
+                size_t len = strlen(data) < (size*nmemb) ? strlen(data) : (size * nmemb);
+                memcpy(ptr, data, len);
+                payload->offset += len;
+                return len;
+        }
+        return 0;
+}
+
+int
+send_email(char *subject, char *body)
+{
+        char *to, *from;
+        char *srvr, *port, *usr, *pwd, *tssls;
+        char urlbuf[512], errBuf[CURL_ERROR_SIZE];
+        struct smtp_payload payload;
+        CURL *curl;
+        CURLcode res = CURLE_OK;
+        struct curl_slist *recipients = NULL;
+	int retval = 0;
+
+        to = nvram_get("smtp_to");
+        from = nvram_get("smtp_from");
+        srvr = nvram_get("smtp_srvr");
+        port = nvram_get("smtp_port");
+        usr = nvram_get("smtp_usr");
+        pwd = nvram_get("smtp_pwd");
+        tssls = nvram_get("smtp_tssls");
+
+        curl = curl_easy_init();
+        if (!curl) {
+                printf("@error: Unable to initialize curl");
+                return 0;
+        }
+        if (usr) {
+                curl_easy_setopt(curl, CURLOPT_USERNAME, usr);
+        }
+        if (pwd) {
+                curl_easy_setopt(curl, CURLOPT_PASSWORD, pwd);
+        }
+        if (srvr && port) {
+                snprintf(urlbuf, sizeof(urlbuf), "smtp%s://%s:%s", tssls ? "s": "", srvr, port);
+                curl_easy_setopt(curl, CURLOPT_URL, urlbuf);
+        } else {
+                printf("@error: No server and/or port specified");
+                goto CURL_CLEANUP;
+        }
+        if (tssls) {
+                curl_easy_setopt(curl, CURLOPT_USE_SSL, (long)CURLUSESSL_ALL);
+        }
+        if (from) {
+                curl_easy_setopt(curl, CURLOPT_MAIL_FROM, from);
+        }
+        if (to) {
+                recipients = curl_slist_append(recipients, to);
+                curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+        } else {
+                printf("@error: No recipients specified");
+                goto CURL_CLEANUP;
+        }
+        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errBuf);
+
+        snprintf(payload.buf, sizeof(payload.buf), "To: %s\r\nFrom: %s\r\nSubject: %s\r\n\r\n%s", to, from, subject, body);
+        payload.offset = 0;
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, smtp_payload_send);
+        curl_easy_setopt(curl, CURLOPT_READDATA, &payload);
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+
+        res = curl_easy_perform(curl);
+        if(res != CURLE_OK) {
+                printf("@error: %s[%d-%s]", errBuf, res, curl_easy_strerror(res));
+        } else {
+                printf("@ok: Message Sent");
+		retval = 1;
+        }
+
+CURL_CLEANUP:
+        curl_slist_free_all(recipients);
+        curl_easy_cleanup(curl);
+
+	return retval;
+}
+
+void
+raise(char *plug, char *content) {
+	int since_last_email = -1;
+	/* Insert or update */
+	sqlite3_reset(notifications_insert_stmt);
+	if (sqlite3_bind_text(notifications_insert_stmt, 1, plug, -1, NULL) != SQLITE_OK) {
+		printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+	}
+	if (sqlite3_bind_text(notifications_insert_stmt, 2, content, -1, NULL) != SQLITE_OK) {
+		printf("Error binding content: %s\n", sqlite3_errmsg(db));
+	}
+	if (sqlite3_bind_text(notifications_insert_stmt, 3, plug, -1, NULL) != SQLITE_OK) {
+		printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+	}
+	if (sqlite3_step(notifications_insert_stmt) != SQLITE_DONE) {
+		printf("INsert failed\n");
+	}
+	/* Pull out last emailed time */
+	sqlite3_reset(notifications_select_stmt);
+	if (sqlite3_bind_text(notifications_select_stmt, 1, plug, -1, NULL) != SQLITE_OK) {
+		printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+	}
+	while (sqlite3_step(notifications_select_stmt) == SQLITE_ROW) {
+		const char *v = sqlite3_column_text(notifications_select_stmt, 0);
+		if (v) {
+			since_last_email = atoi(v);
+		}
+	}
+	if (since_last_email == -1 && send_email(plug, content)) {
+		/* Update last emailed time */
+		sqlite3_reset(notifications_update_stmt);
+		if (sqlite3_bind_text(notifications_update_stmt, 1, plug, -1, NULL) != SQLITE_OK) {
+			printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+		}
+		if (sqlite3_step(notifications_update_stmt) != SQLITE_DONE) {
+			printf("Update failed\n");
+		}
+	}
+	printf("%s -- %s [emailed %ds ago]\n", plug, content, since_last_email);
+}
+
+void 
+timer_cb(evutil_socket_t fd, short what, void *arg) {
 	// Periodic Checks
 	printf("TIMER\n");
 }
@@ -41,7 +204,6 @@ dnsmasq_dhcp_check(char *datetime, char *msg) {
 	regmatch_t m[4];
 
 	const char *statics=nvram_get("dhcpd_static") ?: "";
-	printf("%s\n", statics);
 	if (!regexec(&dnsmasq_dhcp_re, msg, 4, m, 0)) {
 		char ip[20], mac[20], hostname[1000];
 		snprintf(ip, sizeof(ip), "%.*s", m[1].rm_eo-m[1].rm_so, &msg[m[1].rm_so]);
@@ -49,13 +211,17 @@ dnsmasq_dhcp_check(char *datetime, char *msg) {
 		snprintf(hostname, sizeof(hostname), "%.*s", m[3].rm_eo-m[3].rm_so, &msg[m[3].rm_so]);
 		printf("New Lease: %s to %s (%s)\n", ip, mac, hostname);
 		if (strcasestr(mac, statics)) {
-			printf("NOT FOUND IN statics (%s)\n", statics);
+			char plug[100], content[500];
+			snprintf(plug, sizeof(plug), "New DHCP lease to unknown device: %s", mac);
+			snprintf(content, sizeof(content), 
+			    "New DHCP lease, %s, to unknown host with MAC %s[%s]", ip, mac, hostname);
+			raise(plug, content);
 		}
 	}
 }
 
-void recv_cb(evutil_socket_t fd, short what, void *arg)
-{
+void 
+recv_cb(evutil_socket_t fd, short what, void *arg) {
 	// Receive syslog
 	unsigned int unFromAddrLen;
 	int nByte = 0;
@@ -87,15 +253,8 @@ void recv_cb(evutil_socket_t fd, short what, void *arg)
 
 }
 
-int main(int argc, char **argv)
-{
-	struct event_base *base ;
-	struct event timer_ev;
-
-	struct event recv_ev;
-	int udpsock_fd;
-	struct sockaddr_in stAddr;
-
+void
+reg_init(void) {
 	if (regcomp(&syslog_re, SYSLOG_REGEX, REG_EXTENDED|REG_NEWLINE)) {
 		printf("ERROR - unable to compile syslog regex\n");
 		exit(-1);
@@ -105,56 +264,97 @@ int main(int argc, char **argv)
 		printf("ERROR - unable to compile dnsmasq-dhcp regex\n");
 		exit(-1);
 	}
-	base = event_init();
+}
 
-	if ((udpsock_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-	{
+sqlite3 *
+db_init(void) {
+	if (sqlite3_open("/tmp/tomon.db", &db)) {
+		printf("Failed to open database: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		exit(-1);
+	}
+	char *zErrMsg;
+	if (sqlite3_exec(db, NOTIFICATIONS_CREATE_SQL, NULL, 0, &zErrMsg) != SQLITE_OK) {
+		printf("Failed to create database: %s\n", zErrMsg);
+		sqlite3_close(db);
+		exit(-1);
+	}
+	if (sqlite3_prepare_v2(db, NOTIFICATIONS_INSERT_SQL, -1, &notifications_insert_stmt, NULL) != SQLITE_OK) {
+		printf("Failed to prepare INSERT SQL: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		exit(-1);
+	}
+	if (sqlite3_prepare_v2(db, NOTIFICATIONS_SELECT_SQL, -1, &notifications_select_stmt, NULL) != SQLITE_OK) {
+		printf("Failed to prepare SELECT SQL: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		exit(-1);
+	}
+	if (sqlite3_prepare_v2(db, NOTIFICATIONS_UPDATE_SQL, -1, &notifications_update_stmt, NULL) != SQLITE_OK) {
+		printf("Failed to prepare UPDATE SQL: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		exit(-1);
+	}
+	return db;
+}
+
+void
+server_init(struct event *ev) {
+	int udpsock_fd;
+	struct sockaddr_in stAddr;
+
+	if ((udpsock_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
 		printf("ERROR - unable to create socket:n");
 		exit(-1);
 	}
 
-	//Start : Set flags in non-blocking mode
 	int nReqFlags = fcntl(udpsock_fd, F_GETFL, 0);
-	if (nReqFlags< 0)
-	{
+	if (nReqFlags< 0) {
 		printf("ERROR - cannot set socket options");
 	}
 
-	if (fcntl(udpsock_fd, F_SETFL, nReqFlags | O_NONBLOCK) < 0)
-	{
+	if (fcntl(udpsock_fd, F_SETFL, nReqFlags | O_NONBLOCK) < 0) {
 		printf("ERROR - cannot set socket options");
 	}
-	// End: Set flags in non-blocking mode
+
 	memset(&stAddr, 0, sizeof(struct sockaddr_in));
-	//stAddr.sin_addr.s_addr = inet_addr("192.168.64.1555552");
-	stAddr.sin_addr.s_addr = INADDR_ANY; //listening on local ip
+	stAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	stAddr.sin_port = htons(514);
 	stAddr.sin_family = AF_INET;
 
-
 	int nOptVal = 1;
 	if (setsockopt(udpsock_fd, SOL_SOCKET, SO_REUSEADDR,
-				(const void *)&nOptVal, sizeof(nOptVal)))
-	{
+	    (const void *)&nOptVal, sizeof(nOptVal))) {
 		printf("ERROR - socketOptions: Error at Setsockopt");
-
 	}
 
-	if (bind(udpsock_fd, (struct sockaddr *)&stAddr, sizeof(stAddr)) != 0)
-	{
+	if (bind(udpsock_fd, (struct sockaddr *)&stAddr, sizeof(stAddr)) != 0) {
 		printf("Error: Unable to bind the default IP n");
 		exit(-1);
 	}
 
-	event_set(&recv_ev, udpsock_fd, EV_READ | EV_PERSIST, recv_cb, NULL);
-	event_add(&recv_ev, NULL);
+	event_set(ev, udpsock_fd, EV_READ | EV_PERSIST, recv_cb, NULL);
+	event_add(ev, NULL);
+}
 
+void
+timer_init(int sec, struct event *ev) {
 	struct timeval stTv;
-	stTv.tv_sec = 15;
+	stTv.tv_sec = sec;
 	stTv.tv_usec = 0;
-	event_set(&timer_ev, -1, EV_TIMEOUT | EV_PERSIST , timer_cb, NULL);
-	event_add(&timer_ev, &stTv);
+	event_set(ev, -1, EV_TIMEOUT | EV_PERSIST, timer_cb, NULL);
+	event_add(ev, &stTv);
+}
 
+int 
+main(int argc, char **argv) {
+	struct event_base *base;
+	struct event server_ev, timer_ev;
+
+	reg_init();
+	db_init();
+	base = event_init();
+	server_init(&server_ev);
+	timer_init(60, &timer_ev);
 	event_base_dispatch(base);
 	return 0;
 }
