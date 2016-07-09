@@ -1247,6 +1247,7 @@ static const nvset_t nvset_list[] = {
 	{ "web_nav",        V_TEXT(0, 4096)   }, 
 
 // admin-notification
+	{ "tomon_enable",		V_01				},
 	{ "smtp_to",	    		V_LENGTH(0, 64)			},
 	{ "smtp_from",			V_LENGTH(0, 64)			},
 	{ "smtp_srvr",			V_LENGTH(0, 64)			},

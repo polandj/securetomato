@@ -1,8 +1,8 @@
 <title>Notification</title>
 <content>
 <script type="text/javascript">
-//	<% nvram("at_update,tomatoanon_answer,smtp_to,smtp_from,smtp_srvr,smtp_port,smtp_usr,smtp_pwd,smtp_tssls"); %>
-    var tabs = [['email', 'Email'],['events', 'Events']];
+//	<% nvram("at_update,tomatoanon_answer,tomon_enable,smtp_to,smtp_from,smtp_srvr,smtp_port,smtp_usr,smtp_pwd,smtp_tssls"); %>
+    var tabs = [['config', 'Configuration'], ['email', 'Email'],['events', 'Events']];
     function tabSelect(name) {
         tgHideIcons();
         cookie.set('admin_notification_tab', name);
@@ -98,7 +98,7 @@
     }
   
     function earlyInit(){
-        tabSelect(cookie.get('admin_notification_tab') || 'email');
+        tabSelect(cookie.get('admin_notification_tab') || 'config');
         init();
     }
     function init() {
@@ -107,7 +107,7 @@
 
 <form id="_fom" method="post" action="tomato.cgi">
 <input type="hidden" name="_nextpage" value="/#admin-notification.asp">
-<input type="hidden" name="_service" value="">
+<input type="hidden" name="_service" value="tomon">
 
 <div id="admin-notification">
     <script type="text/javascript">
@@ -117,6 +117,19 @@
         }
         html += '</ul>';
         html += '<div class="content">';
+
+        // Config Tab
+        html += '<div id="config-tab">';
+        html += '<input type="hidden" name="tomon_enable">';
+        html += ' <div class="box" data-box="">';
+        html += '  <div class="heading">Basic Configuration</div>';
+        html += '  <div class="section content">';
+        html += createFormFields([
+                { title: 'Enable', name: 'f_tomon_enable', type: 'checkbox', value: nvram.tomon_enable == '1' }
+            ]);
+        html += '  </div>';
+        html += ' </div>';
+        html += '</div>';
 
         // Email Tab
         html += '<div id="email-tab">';
@@ -147,8 +160,6 @@
 
         // Events tab
         html += '<div id="events-tab">';
-        html += ' <input type="hidden" name="malad_dflt">';
-        html += ' <input type="hidden" name="malad_xtra">';
         html += ' <div class="box" data-box="">';
         html += '  <div class="heading">Events</div>';
         html += '  <div class="section content">';

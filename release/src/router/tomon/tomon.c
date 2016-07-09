@@ -267,8 +267,10 @@ reg_init(void) {
 }
 
 sqlite3 *
-db_init(void) {
-	if (sqlite3_open("/tmp/tomon.db", &db)) {
+db_init(char * dir) {
+	char dbfile[256];
+	snprintf(dbfile, sizeof(dbfile), "%s/notifications.db", dir);
+	if (sqlite3_open(dbfile, &db)) {
 		printf("Failed to open database: %s\n", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		exit(-1);
@@ -350,8 +352,13 @@ main(int argc, char **argv) {
 	struct event_base *base;
 	struct event server_ev, timer_ev;
 
+	if (argc != 2) {
+		printf("Usage: %s <dir>\n", argv[0]);
+		return (-1);
+	}
+
 	reg_init();
-	db_init();
+	db_init(argv[1]);
 	base = event_init();
 	server_init(&server_ev);
 	timer_init(60, &timer_ev);

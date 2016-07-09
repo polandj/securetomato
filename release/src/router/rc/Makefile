@@ -18,6 +18,7 @@ OBJS += new_qoslimit.o arpbind.o
 OBJS += tomatoanon.o
 OBJS += blink.o
 OBJS += adblock.o
+OBJS += tomon.o
 
 ifeq ($(CONFIG_BCMWL6),y)
 OBJS += blink_5g.o
