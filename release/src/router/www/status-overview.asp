@@ -3,17 +3,17 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="content-type" content="text/html;charset=utf-8">
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
 		<meta name="robots" content="noindex,nofollow">
 		<title>[<% ident(); %>]: Home</title>
 
 		<!-- Stylesheets -->
-		<link href="css/reset.css" rel="stylesheet">
-		<link href="css/style.css" rel="stylesheet">
+		<link href="css/reset.css" rel="stylesheet" type="text/css">
+		<link href="css/style.css" rel="stylesheet" type="text/css">
 		<% css(); %>
 
 		<!-- Load Favicon (icon) -->
-		<link rel="shortcut icon" href="/favicon.ico" />
+		<link rel="shortcut icon" href="favicon.ico">
 
 		<!-- One time load JAVASCRIPT -->
 		<script type="text/javascript" src="js/jquery.min.js"></script>
@@ -49,7 +49,7 @@
 				$( '#gui-version' ).html( '<i class="icon-info-alt"></i> <span class="nav-collapse-hide">' + gui_version + '</span>' );
 				AdvancedTomato();
 
-			} );
+			});
 
 		</script>
 	</head>
@@ -67,14 +67,14 @@
 				</a>
 
 				<div class="left-container">
-					<a data-toggle="tooltip" title="Toggle Collapsed Navigation" href="#" class="toggle-nav"><i class="icon-align-left"></i></a>
+					<a title="Toggle Collapsed Navigation" href="#" class="toggle-nav"><i class="icon-toggle-nav"></i></a>
 				</div>
 
 				<div class="pull-right links">
 					<ul>
 						<li><a title="Tools" href="#tools-ping.asp">Tools <i class="icon-tools"></i></a></li>
 						<li><a title="Bandwidth" href="#bwm-realtime.asp">Bandwidth <i class="icon-graphs"></i></a></li>
-						<li><a title="IP Traffic" href="#bwm-ipt-realtime.asp">IP Traffic <i class="icon-globe"></i></a></li>
+						<li><a title="IP Traffic" href="#bwm-ipt-realtime.asp">IP Traffic <i class="icon-traffic"></i></a></li>
 						<li><a title="System" id="system-ui" href="#system">System <i class="icon-system"></i></a></li>
 					</ul>
 					<div class="system-ui">
@@ -98,8 +98,17 @@
 
 
 			<div class="container">
-				<div class="ajaxwrap"></div>
+				<div class="ajaxwrap">
+
+					<div class="container-center">
+						<div class="spinner spinner-large"></div><br><br>
+						Loading interface, please wait...
+					</div>
+
+				</div>
+
 				<div class="clearfix"></div>
+
 			</div>
 
 		</div>
