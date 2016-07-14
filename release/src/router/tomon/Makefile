@@ -24,8 +24,10 @@ tomon: $(OBJS)
 	
 install: all
 	install -D tomon $(INSTALLDIR)/bin/tomon
+	install -D tomon.sh $(INSTALLDIR)/bin/tomon.sh
 	$(STRIP) $(INSTALLDIR)/bin/tomon
 	chmod 0555 $(INSTALLDIR)/bin/tomon
+	chmod 0555 $(INSTALLDIR)/bin/tomon.sh
 
 clean:
 	rm -f tomon *.o *.a *.so

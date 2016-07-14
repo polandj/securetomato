@@ -12,7 +12,6 @@ for p in $prefixlist; do
                 prefix=$p
         fi
 done
-mkdir "$profix/tomon"
-echo "tomon running in $profix/tomon"
-tomon $profix/tomon 
+mkdir "$prefix/tomon"
+/bin/tomon $prefix/tomon 
 

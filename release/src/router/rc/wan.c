@@ -1250,9 +1250,13 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		if (wanup && nvram_get_int("pptp_client_enable"))
 			start_pptp_client();
 #endif
+		if (nvram_match("malad_enable", "1")) {
+			xstart("/bin/adblock.sh", "cron");
+		}
 
-		if (wanup)
-			start_adblock_wanup();
+	        if(nvram_match( "tomon_enable", "1" )) {
+		        xstart("/bin/tomon.sh");
+		}
 
 		new_qoslimit_start(); //!! RAF
 	}

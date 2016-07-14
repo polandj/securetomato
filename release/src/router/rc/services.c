@@ -920,6 +920,22 @@ void stop_adblock()
 	xstart("/usr/sbin/adblock", "stop");
 }
 
+void start_maladware(void) {
+	xstart("/bin/adblock.sh", "cron");
+}
+
+void stop_maladware(void) {
+	xstart("/bin/adblock.sh", "stop");
+}
+
+void start_tomon(void) {
+      	xstart("/bin/tomon.sh");
+}
+
+void stop_tomon(void) {
+        killall("/bin/tomon", SIGTERM);
+}
+
 void start_ipv6(void)
 {
 	int service;
@@ -3131,9 +3147,15 @@ TOP:
 	}
 #endif
 
-	if (strcmp(service, "adblock") == 0) {
-		if (action & A_STOP) stop_adblock();
-		if (action & A_START) start_adblock();
+	if (strcmp(service, "maladware") == 0) {
+		if (action & A_STOP) stop_maladware();
+		if (action & A_START) start_maladware();
+		goto CLEAR;
+	}
+
+	if (strcmp(service, "tomon") == 0) {
+		if (action & A_STOP) stop_tomon();
+		if (action & A_START) start_tomon();
 		goto CLEAR;
 	}
 

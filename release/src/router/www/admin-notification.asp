@@ -84,7 +84,8 @@
         var fom, r;
     
         fom = E('_fom');
-
+    
+        fom.tomon_enable.value = E('_f_tomon_enable').checked ? 1 : 0;
         fom.smtp_to.value = E('_f_smtp_to').value;
         fom.smtp_from.value = E('_f_smtp_from').value;
         fom.smtp_srvr.value = E('_f_smtp_srvr').value;

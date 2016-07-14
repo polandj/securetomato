@@ -25,6 +25,7 @@
 #include <bcmnvram.h>
 #include <sqlite3.h>
 #include <curl/curl.h>
+#include <syslog.h>
 
 #define SYSLOG_REGEX "<[0-9]+>([a-zA-Z]+[ ]+[0-9]+[ ]+[0-9:]+)[ ]+([^[]+)[][0-9]+[: ]+(.+)"
 #define DNSMASQ_DHCP_REGEX "DHCPACK.+ ([0-9.]+) ([0-9a-fA-F:]+) ?(.*)"
@@ -100,7 +101,7 @@ send_email(char *subject, char *body)
 
         curl = curl_easy_init();
         if (!curl) {
-                printf("@error: Unable to initialize curl");
+                syslog(LOG_ERR,"@error: Unable to initialize curl");
                 return 0;
         }
         if (usr) {
@@ -113,7 +114,7 @@ send_email(char *subject, char *body)
                 snprintf(urlbuf, sizeof(urlbuf), "smtp%s://%s:%s", tssls ? "s": "", srvr, port);
                 curl_easy_setopt(curl, CURLOPT_URL, urlbuf);
         } else {
-                printf("@error: No server and/or port specified");
+                syslog(LOG_ERR,"@error: No server and/or port specified");
                 goto CURL_CLEANUP;
         }
         if (tssls) {
@@ -126,7 +127,7 @@ send_email(char *subject, char *body)
                 recipients = curl_slist_append(recipients, to);
                 curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
         } else {
-                printf("@error: No recipients specified");
+                syslog(LOG_ERR,"@error: No recipients specified");
                 goto CURL_CLEANUP;
         }
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errBuf);
@@ -139,9 +140,9 @@ send_email(char *subject, char *body)
 
         res = curl_easy_perform(curl);
         if(res != CURLE_OK) {
-                printf("@error: %s[%d-%s]", errBuf, res, curl_easy_strerror(res));
+                syslog(LOG_ERR,"@error: %s[%d-%s]", errBuf, res, curl_easy_strerror(res));
         } else {
-                printf("@ok: Message Sent");
+                syslog(LOG_ERR,"@ok: Message Sent");
 		retval = 1;
         }
 
@@ -158,21 +159,21 @@ raise(char *plug, char *content) {
 	/* Insert or update */
 	sqlite3_reset(notifications_insert_stmt);
 	if (sqlite3_bind_text(notifications_insert_stmt, 1, plug, -1, NULL) != SQLITE_OK) {
-		printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Error binding plug: %s", sqlite3_errmsg(db));
 	}
 	if (sqlite3_bind_text(notifications_insert_stmt, 2, content, -1, NULL) != SQLITE_OK) {
-		printf("Error binding content: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Error binding content: %s", sqlite3_errmsg(db));
 	}
 	if (sqlite3_bind_text(notifications_insert_stmt, 3, plug, -1, NULL) != SQLITE_OK) {
-		printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Error binding plug: %s", sqlite3_errmsg(db));
 	}
 	if (sqlite3_step(notifications_insert_stmt) != SQLITE_DONE) {
-		printf("INsert failed\n");
+		syslog(LOG_ERR,"INsert failed");
 	}
 	/* Pull out last emailed time */
 	sqlite3_reset(notifications_select_stmt);
 	if (sqlite3_bind_text(notifications_select_stmt, 1, plug, -1, NULL) != SQLITE_OK) {
-		printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Error binding plug: %s", sqlite3_errmsg(db));
 	}
 	while (sqlite3_step(notifications_select_stmt) == SQLITE_ROW) {
 		const char *v = sqlite3_column_text(notifications_select_stmt, 0);
@@ -184,19 +185,19 @@ raise(char *plug, char *content) {
 		/* Update last emailed time */
 		sqlite3_reset(notifications_update_stmt);
 		if (sqlite3_bind_text(notifications_update_stmt, 1, plug, -1, NULL) != SQLITE_OK) {
-			printf("Error binding plug: %s\n", sqlite3_errmsg(db));
+			syslog(LOG_ERR,"Error binding plug: %s", sqlite3_errmsg(db));
 		}
 		if (sqlite3_step(notifications_update_stmt) != SQLITE_DONE) {
-			printf("Update failed\n");
+			syslog(LOG_ERR,"Update failed");
 		}
 	}
-	printf("%s -- %s [emailed %ds ago]\n", plug, content, since_last_email);
+	syslog(LOG_ERR,"%s -- %s [emailed %ds ago]", plug, content, since_last_email);
 }
 
 void 
 timer_cb(evutil_socket_t fd, short what, void *arg) {
 	// Periodic Checks
-	printf("TIMER\n");
+	syslog(LOG_ERR,"TIMER");
 }
 
 void
@@ -209,7 +210,7 @@ dnsmasq_dhcp_check(char *datetime, char *msg) {
 		snprintf(ip, sizeof(ip), "%.*s", m[1].rm_eo-m[1].rm_so, &msg[m[1].rm_so]);
 		snprintf(mac, sizeof(mac), "%.*s", m[2].rm_eo-m[2].rm_so, &msg[m[2].rm_so]);
 		snprintf(hostname, sizeof(hostname), "%.*s", m[3].rm_eo-m[3].rm_so, &msg[m[3].rm_so]);
-		printf("New Lease: %s to %s (%s)\n", ip, mac, hostname);
+		syslog(LOG_ERR,"New Lease: %s to %s (%s)", ip, mac, hostname);
 		if (strcasestr(mac, statics)) {
 			char plug[100], content[500];
 			snprintf(plug, sizeof(plug), "New DHCP lease to unknown device: %s", mac);
@@ -233,7 +234,7 @@ recv_cb(evutil_socket_t fd, short what, void *arg) {
 	if ((nByte = recvfrom(fd, aReqBuffer, sizeof(aReqBuffer)-1, 0,
 					(struct sockaddr *)&stFromAddr, &unFromAddrLen)) == -1)
 	{
-		printf("error occured while receivingn");
+		syslog(LOG_ERR,"error occured while receiving");
 	}
 
 	aReqBuffer[nByte] = '\0';
@@ -243,12 +244,9 @@ recv_cb(evutil_socket_t fd, short what, void *arg) {
 		snprintf(datetime, sizeof(datetime), "%.*s", m[1].rm_eo-m[1].rm_so, &aReqBuffer[m[1].rm_so]);
 		snprintf(daemon, sizeof(daemon), "%.*s", m[2].rm_eo-m[2].rm_so, &aReqBuffer[m[2].rm_so]);
 		snprintf(msg, sizeof(msg), "%.*s", m[3].rm_eo-m[3].rm_so, &aReqBuffer[m[3].rm_so]);
-		printf("Matched -> %s - %s - %s\n", datetime, daemon, msg);
 		if (!strcasecmp(daemon, "dnsmasq-dhcp")) {
 			dnsmasq_dhcp_check(datetime, msg);
 		}
-	} else {
-		printf("NO MATCH: '%.*s'\n",nByte, aReqBuffer);
 	}
 
 }
@@ -256,12 +254,12 @@ recv_cb(evutil_socket_t fd, short what, void *arg) {
 void
 reg_init(void) {
 	if (regcomp(&syslog_re, SYSLOG_REGEX, REG_EXTENDED|REG_NEWLINE)) {
-		printf("ERROR - unable to compile syslog regex\n");
+		syslog(LOG_ERR,"ERROR - unable to compile syslog regex");
 		exit(-1);
 	}
 
 	if (regcomp(&dnsmasq_dhcp_re, DNSMASQ_DHCP_REGEX, REG_EXTENDED|REG_NEWLINE)) {
-		printf("ERROR - unable to compile dnsmasq-dhcp regex\n");
+		syslog(LOG_ERR,"ERROR - unable to compile dnsmasq-dhcp regex");
 		exit(-1);
 	}
 }
@@ -271,28 +269,28 @@ db_init(char * dir) {
 	char dbfile[256];
 	snprintf(dbfile, sizeof(dbfile), "%s/notifications.db", dir);
 	if (sqlite3_open(dbfile, &db)) {
-		printf("Failed to open database: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Failed to open database: %s", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		exit(-1);
 	}
 	char *zErrMsg;
 	if (sqlite3_exec(db, NOTIFICATIONS_CREATE_SQL, NULL, 0, &zErrMsg) != SQLITE_OK) {
-		printf("Failed to create database: %s\n", zErrMsg);
+		syslog(LOG_ERR,"Failed to create database: %s", zErrMsg);
 		sqlite3_close(db);
 		exit(-1);
 	}
 	if (sqlite3_prepare_v2(db, NOTIFICATIONS_INSERT_SQL, -1, &notifications_insert_stmt, NULL) != SQLITE_OK) {
-		printf("Failed to prepare INSERT SQL: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Failed to prepare INSERT SQL: %s", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		exit(-1);
 	}
 	if (sqlite3_prepare_v2(db, NOTIFICATIONS_SELECT_SQL, -1, &notifications_select_stmt, NULL) != SQLITE_OK) {
-		printf("Failed to prepare SELECT SQL: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Failed to prepare SELECT SQL: %s", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		exit(-1);
 	}
 	if (sqlite3_prepare_v2(db, NOTIFICATIONS_UPDATE_SQL, -1, &notifications_update_stmt, NULL) != SQLITE_OK) {
-		printf("Failed to prepare UPDATE SQL: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR,"Failed to prepare UPDATE SQL: %s", sqlite3_errmsg(db));
 		sqlite3_close(db);
 		exit(-1);
 	}
@@ -305,17 +303,17 @@ server_init(struct event *ev) {
 	struct sockaddr_in stAddr;
 
 	if ((udpsock_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-		printf("ERROR - unable to create socket:n");
+		syslog(LOG_ERR,"ERROR - unable to create socket:n");
 		exit(-1);
 	}
 
 	int nReqFlags = fcntl(udpsock_fd, F_GETFL, 0);
 	if (nReqFlags< 0) {
-		printf("ERROR - cannot set socket options");
+		syslog(LOG_ERR,"ERROR - cannot set socket options");
 	}
 
 	if (fcntl(udpsock_fd, F_SETFL, nReqFlags | O_NONBLOCK) < 0) {
-		printf("ERROR - cannot set socket options");
+		syslog(LOG_ERR,"ERROR - cannot set socket options");
 	}
 
 	memset(&stAddr, 0, sizeof(struct sockaddr_in));
@@ -326,11 +324,11 @@ server_init(struct event *ev) {
 	int nOptVal = 1;
 	if (setsockopt(udpsock_fd, SOL_SOCKET, SO_REUSEADDR,
 	    (const void *)&nOptVal, sizeof(nOptVal))) {
-		printf("ERROR - socketOptions: Error at Setsockopt");
+		syslog(LOG_ERR,"ERROR - socketOptions: Error at Setsockopt");
 	}
 
 	if (bind(udpsock_fd, (struct sockaddr *)&stAddr, sizeof(stAddr)) != 0) {
-		printf("Error: Unable to bind the default IP n");
+		syslog(LOG_ERR,"Error: Unable to bind the default IP n");
 		exit(-1);
 	}
 
@@ -353,9 +351,12 @@ main(int argc, char **argv) {
 	struct event server_ev, timer_ev;
 
 	if (argc != 2) {
-		printf("Usage: %s <dir>\n", argv[0]);
+		syslog(LOG_ERR,"Usage: %s <dir>", argv[0]);
 		return (-1);
 	}
+
+	openlog("tomon", LOG_PERROR, LOG_DAEMON);
+	syslog(LOG_INFO, "Running from directory %s", argv[1]);
 
 	reg_init();
 	db_init(argv[1]);
