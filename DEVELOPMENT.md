@@ -17,6 +17,8 @@ Any Linux environment should work.  Ubuntu is known to work well.  Install the f
 - libtool
 - texinfo
 - gawk
+- g++
+- net-tools
  
 Get the source code:
 ```
