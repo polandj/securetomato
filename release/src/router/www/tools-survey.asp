@@ -238,7 +238,7 @@ No part of this file may be used without permission.
 					mac,
 					(e.rssi == -999) ? '' : (e.rssi + ' <small>dBm</small>'),
 					(e.noise == -999) ? '' : (e.noise + ' <small>dBm</small>'),
-					'<small>' + e.qual + '</small></b> <div class="progress"><div class="bar ' + bar + '" style="width:' + e.qual + '%;"></div></div>',
+					'<small>' + e.qual + '</small></b> <div class="progress small"><div class="bar ' + bar + '" style="width:' + e.qual + '%;"></div></div>',
 					'' + e.channel,
 					'' + e.cap,
 					'' + e.rates], false);
@@ -269,7 +269,6 @@ No part of this file may be used without permission.
 
 
 		var ref = new TomatoRefresh('/update.cgi', 'exec=wlscan', 0, 'tools_survey_refresh');
-
 		ref.refresh = function(text)
 		{
 			try {
@@ -289,6 +288,9 @@ No part of this file may be used without permission.
 			sg.recolor();
 			$('#survey-controls .spinner').after('&nbsp; ' + genStdTimeList('expire-time', 'Auto Expire', 1) + genStdTimeList('refresh-time', 'Auto Refresh', 1));
 			ref.initPage();
+
+			// After every thing, first time refresh data
+			ref.start();
 		}
 
 	</script>

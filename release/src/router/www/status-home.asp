@@ -127,8 +127,8 @@
 			c( 'cpu', stats.cpuload );
 			c( 'uptime', stats.uptime );
 			c( 'time', stats.time );
-			c( 'memory', stats.memory + '<div class="progress"><div class="bar" style="width: ' + stats.memoryperc + ';"></div></div>' );
-			c( 'swap', stats.swap + '<div class="progress"><div class="bar" style="width: ' + stats.swapperc + ';"></div></div>' );
+			c( 'memory', stats.memory + '<div class="progress small"><div class="bar" style="width: ' + stats.memoryperc + ';"></div></div>' );
+			c( 'swap', stats.swap + '<div class="progress small"><div class="bar" style="width: ' + stats.swapperc + ';"></div></div>' );
 			elem.display( 'swap', stats.swap != '' );
 
 /* IPV6-BEGIN */
@@ -258,9 +258,9 @@
 						{ title: 'Time', rid: 'time', text: stats.time },
 						{ title: 'Uptime', rid: 'uptime', text: stats.uptime },
 						{ title: 'CPU Load <small>(1 / 5 / 15 mins)</small>', rid: 'cpu', text: stats.cpuload },
-						{ title: 'Memory Usage', rid: 'memory', text: stats.memory + '<div class="progress"><div class="bar" style="width: ' + stats.memoryperc + ';"></div></div>' },
-						{ title: 'Swap Usage', rid: 'swap', text: stats.swap + '<div class="progress"><div class="bar" style="width: ' + stats.swapperc + ';"></div></div>', hidden: (stats.swap == '') },
-						{ title: 'NVRAM Usage', text: scaleSize(nvstat.size - nvstat.free) + ' <small>/</small> ' + scaleSize(nvstat.size) + ' (' + (a).toFixed(2) + '%) <div class="progress"><div class="bar" style="width: ' + (a).toFixed(2) + '%;"></div></div>' },
+						{ title: 'Memory Usage', rid: 'memory', text: stats.memory + '<div class="progress small"><div class="bar" style="width: ' + stats.memoryperc + ';"></div></div>' },
+						{ title: 'Swap Usage', rid: 'swap', text: stats.swap + '<div class="progress small"><div class="bar" style="width: ' + stats.swapperc + ';"></div></div>', hidden: (stats.swap == '') },
+						{ title: 'NVRAM Usage', text: scaleSize(nvstat.size - nvstat.free) + ' <small>/</small> ' + scaleSize(nvstat.size) + ' (' + (a).toFixed(2) + '%) <div class="progress small"><div class="bar" style="width: ' + (a).toFixed(2) + '%;"></div></div>' },
 						], '#sesdiv_system', 'data-table dataonly');
 				</script>
 			</div>
@@ -422,7 +422,7 @@
 					{ title: 'Signal Quality', rid: 'qual'+uidx, text: stats.qual[uidx] || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx)>=0)) }
 					], null, 'data-table dataonly');
 
-				data += '<div class="btn-control-group" style="display: none;">';
+				data += '<div class="btn-control-group"><br>';
 				data += '<button type="button" class="btn btn-primary" onclick="wlenable('+uidx+', 1)" id="b_wl'+uidx+'_enable" value="Enable">Enable <i class="icon-check"></i></button>';
 				data += '<button type="button" class="btn btn-danger" onclick="wlenable('+uidx+', 0)" id="b_wl'+uidx+'_disable" value="Disable">Disable <i class="icon-disable"></i></button>';
 				data += '</div></div></div>';
