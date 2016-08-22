@@ -280,9 +280,9 @@ sub fixDyn
 
 	fixDynDep("curl", "libcurl.so.4.4.0");
 
-	fixDynDep("httpd", "libcurl.so.4.3.0");
+	fixDynDep("httpd", "libcurl.so.4.4.0");
 	fixDynDep("tomon", "libsqlite3.so.0.8.6");
-	fixDynDep("tomon", "libcurl.so.4.3.0");
+	fixDynDep("tomon", "libcurl.so.4.4.0");
 
 #!!TB - Updated Broadcom WL driver
 	fixDynDep("libbcmcrypto.so", "libc.so.0");

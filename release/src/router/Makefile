@@ -2158,7 +2158,7 @@ libcurl/stamp-h1: zlib openssl
 		--disable-file --disable-ftp --enable-http --enable-ipv6 --disable-tftp --disable-rtsp \
 		--disable-nls --disable-ares --disable-dict --disable-debug --disable-gopher \
 		--disable-ldap --disable-manual --disable-telnet --disable-verbose --disable-pop3 --disable-imap \
-		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl/ssl"  --with-zlib="$(TOP)/zlib" \
+		--with-random="/dev/urandom" --with-ssl="$(TOP)/openssl"  --with-zlib="$(TOP)/zlib" \
 		--without-axtls --without-gnutls --without-krb4 --without-libidn \
                 --with-ca-bundle=/usr/local/libcurl/cacert.pem \
 		--with-linux-headers=$(LINUXDIR)/include \
