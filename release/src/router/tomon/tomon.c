@@ -55,13 +55,15 @@ sqlite3_stmt *notifications_update_stmt;
 
 regex_t syslog_re;
 regex_t dnsmasq_dhcp_re;
-
+unsigned int syslogs_recvd;
+ 
 struct smtp_payload {
         char buf[2048];
         size_t offset;
 };
 
-static size_t smtp_payload_send(void *ptr, size_t size, size_t nmemb, void *userp)
+static size_t 
+smtp_payload_send(void *ptr, size_t size, size_t nmemb, void *userp)
 {
         struct smtp_payload *payload = (struct smtp_payload *)userp;
         const char *data;
@@ -101,7 +103,7 @@ send_email(char *subject, char *body)
 
         curl = curl_easy_init();
         if (!curl) {
-                syslog(LOG_ERR,"@error: Unable to initialize curl");
+                syslog(LOG_ERR,"Error: Unable to initialize curl");
                 return 0;
         }
         if (usr) {
@@ -114,7 +116,7 @@ send_email(char *subject, char *body)
                 snprintf(urlbuf, sizeof(urlbuf), "smtp%s://%s:%s", tssls ? "s": "", srvr, port);
                 curl_easy_setopt(curl, CURLOPT_URL, urlbuf);
         } else {
-                syslog(LOG_ERR,"@error: No server and/or port specified");
+                syslog(LOG_ERR,"Error: No server and/or port specified");
                 goto CURL_CLEANUP;
         }
         if (tssls) {
@@ -127,7 +129,7 @@ send_email(char *subject, char *body)
                 recipients = curl_slist_append(recipients, to);
                 curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
         } else {
-                syslog(LOG_ERR,"@error: No recipients specified");
+                syslog(LOG_ERR,"Error: No recipients specified");
                 goto CURL_CLEANUP;
         }
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errBuf);
@@ -140,9 +142,9 @@ send_email(char *subject, char *body)
 
         res = curl_easy_perform(curl);
         if(res != CURLE_OK) {
-                syslog(LOG_ERR,"@error: %s[%d-%s]", errBuf, res, curl_easy_strerror(res));
+                syslog(LOG_ERR,"Error: %s[%d-%s]", errBuf, res, curl_easy_strerror(res));
         } else {
-                syslog(LOG_ERR,"@ok: Message Sent");
+                syslog(LOG_ERR,"Message Sent to %s", to);
 		retval = 1;
         }
 
@@ -168,7 +170,7 @@ raise(char *plug, char *content) {
 		syslog(LOG_ERR,"Error binding plug: %s", sqlite3_errmsg(db));
 	}
 	if (sqlite3_step(notifications_insert_stmt) != SQLITE_DONE) {
-		syslog(LOG_ERR,"INsert failed");
+		syslog(LOG_ERR,"Insert failed");
 	}
 	/* Pull out last emailed time */
 	sqlite3_reset(notifications_select_stmt);
@@ -197,7 +199,8 @@ raise(char *plug, char *content) {
 void 
 timer_cb(evutil_socket_t fd, short what, void *arg) {
 	// Periodic Checks
-	syslog(LOG_ERR,"TIMER");
+	syslog(LOG_ERR,"Received %d syslogs since last timer", syslogs_recvd);
+	syslogs_recvd = 0;
 }
 
 void
@@ -216,6 +219,7 @@ dnsmasq_dhcp_check(char *datetime, char *msg) {
 			snprintf(plug, sizeof(plug), "New DHCP lease to unknown device: %s", mac);
 			snprintf(content, sizeof(content), 
 			    "New DHCP lease, %s, to unknown host with MAC %s[%s]", ip, mac, hostname);
+                        syslog(LOG_ERR,content);
 			raise(plug, content);
 		}
 	}
@@ -247,6 +251,7 @@ recv_cb(evutil_socket_t fd, short what, void *arg) {
 		if (!strcasecmp(daemon, "dnsmasq-dhcp")) {
 			dnsmasq_dhcp_check(datetime, msg);
 		}
+		syslogs_recvd++;
 	}
 
 }
