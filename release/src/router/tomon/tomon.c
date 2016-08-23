@@ -357,12 +357,12 @@ main(int argc, char **argv) {
 	struct event_base *base;
 	struct event server_ev, timer_ev;
 
+	openlog("tomon", LOG_PERROR, LOG_DAEMON);
 	if (argc != 2) {
 		syslog(LOG_ERR,"Usage: %s <dir>", argv[0]);
 		return (-1);
 	}
 
-	openlog("tomon", LOG_PERROR, LOG_DAEMON);
 	syslog(LOG_INFO, "Running from directory %s", argv[1]);
 
 	reg_init();
