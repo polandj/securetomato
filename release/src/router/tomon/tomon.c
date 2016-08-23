@@ -199,7 +199,9 @@ raise(char *plug, char *content) {
 void 
 timer_cb(evutil_socket_t fd, short what, void *arg) {
 	// Periodic Checks
-	syslog(LOG_ERR,"Received %d syslogs since last timer", syslogs_recvd);
+        if (syslogs_recvd > 1) {
+		syslog(LOG_ERR,"Received %d syslogs since last timer", syslogs_recvd);
+	}
 	syslogs_recvd = 0;
 }
 
@@ -213,13 +215,13 @@ dnsmasq_dhcp_check(char *datetime, char *msg) {
 		snprintf(ip, sizeof(ip), "%.*s", m[1].rm_eo-m[1].rm_so, &msg[m[1].rm_so]);
 		snprintf(mac, sizeof(mac), "%.*s", m[2].rm_eo-m[2].rm_so, &msg[m[2].rm_so]);
 		snprintf(hostname, sizeof(hostname), "%.*s", m[3].rm_eo-m[3].rm_so, &msg[m[3].rm_so]);
-		syslog(LOG_ERR,"New Lease: %s to %s (%s)", ip, mac, hostname);
-		if (strcasestr(mac, statics)) {
+		//syslog(LOG_ERR,"New Lease: %s to %s [%s]", ip, mac, hostname);
+		if (!strcasestr(statics, mac)) {
 			char plug[100], content[500];
-			snprintf(plug, sizeof(plug), "New DHCP lease to unknown device: %s", mac);
+			snprintf(plug, sizeof(plug), "New DHCP lease to unknown device: %s", strlen(hostname) > 0 ? hostname : mac);
 			snprintf(content, sizeof(content), 
-			    "New DHCP lease, %s, to unknown host with MAC %s[%s]", ip, mac, hostname);
-                        syslog(LOG_ERR,content);
+			    "New DHCP lease, %s, to unknown host with MAC %s [%s]", ip, mac, hostname);
+                        //syslog(LOG_ERR,content);
 			raise(plug, content);
 		}
 	}
@@ -367,7 +369,7 @@ main(int argc, char **argv) {
 	db_init(argv[1]);
 	base = event_init();
 	server_init(&server_ev);
-	timer_init(60, &timer_ev);
+	timer_init(300, &timer_ev);
 	event_base_dispatch(base);
 	return 0;
 }
