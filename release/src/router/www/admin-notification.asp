@@ -95,6 +95,12 @@
         fom.smtp_tssls.value = E('_f_smtp_tssls').value;
         fom.smtp_tssls.value = E('_f_smtp_tssls').checked ? 1 : 0;
 
+	if (fom.tomon_enable.value == 0) {
+		fom._service.value = 'tomon-stop';
+ 	} else {
+		fom._service.value = 'tomon-restart';
+	}
+
         form.submit('_fom', 1);
     }
   
@@ -108,7 +114,7 @@
 
 <form id="_fom" method="post" action="tomato.cgi">
 <input type="hidden" name="_nextpage" value="/#admin-notification.asp">
-<input type="hidden" name="_service" value="tomon">
+<input type="hidden" name="_service" value="tomon-restart">
 
 <div id="admin-notification">
     <script type="text/javascript">

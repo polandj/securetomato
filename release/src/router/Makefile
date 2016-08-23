@@ -1345,13 +1345,13 @@ sqlite-clean:
 
 sqlite-install: sqlite
 	@$(SEP)
-#ifeq ($(TCONFIG_NGINX),y)
 	install -D sqlite/.libs/libsqlite3.so.0.8.6 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
+	install -D sqlite/.libs/sqlite3 $(INSTALLDIR)/sqlite/usr/sbin/sqlite3
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/sbin/sqlite3
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
 		ln -sf libsqlite3.so.0.8.6 libsqlite3.so.0 && \
 		ln -sf libsqlite3.so.0.8.6 libsqlite3.so
-#endif
 
 FFMPEG_FILTER_CONFIG= $(foreach c, $(2), --$(1)="$(c)")
 
